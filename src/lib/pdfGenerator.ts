@@ -369,7 +369,7 @@ export const generateMatchPDF = (result: MatchResult) => {
     doc.setFontSize(8);
     doc.setTextColor(128, 128, 128);
     doc.text(
-      "Built with ❤️ by Futurearc · matchai.app",
+      "Built with ❤️ by Mohamed · matchai.app",
       pageWidth / 2,
       pageHeight - 8,
       { align: "center" }

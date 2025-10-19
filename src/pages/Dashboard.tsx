@@ -212,7 +212,7 @@ const Dashboard = () => {
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.text(
-        `Built with ❤️ by Futurearc - Page ${i} of ${pageCount}`,
+        `Built with ❤️ by Mohamed - Page ${i} of ${pageCount}`,
         doc.internal.pageSize.getWidth() / 2,
         doc.internal.pageSize.getHeight() - 10,
         { align: "center" }
@@ -355,7 +355,7 @@ const Dashboard = () => {
       <footer className="border-t border-border bg-card/50 mt-20">
         <div className="container mx-auto px-6 py-8">
           <p className="text-center text-muted-foreground">
-            Built with ❤️ by <span className="font-semibold text-foreground">Futurearc</span>
+            Built with ❤️ by <span className="font-semibold text-foreground">Mohamed</span>
           </p>
         </div>
       </footer>
