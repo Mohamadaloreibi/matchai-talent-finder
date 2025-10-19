@@ -6,7 +6,8 @@ import { LoadingState } from "@/components/LoadingState";
 import { MatchHistory } from "@/components/MatchHistory";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Briefcase, Sparkles } from "lucide-react";
+import { Sparkles, LayoutDashboard } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface MatchResultData {
   score: number;
@@ -144,9 +145,12 @@ const Index = () => {
               </div>
               <h1 className="text-2xl font-bold text-foreground">MatchAI</h1>
             </div>
-            <p className="text-sm text-muted-foreground hidden sm:block">
-              AI-Powered CV & Job Matching
-            </p>
+            <Link to="/dashboard">
+              <Button variant="outline" className="gap-2">
+                <LayoutDashboard className="w-4 h-4" />
+                Employer Dashboard
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
