@@ -23,13 +23,13 @@ serve(async (req) => {
     const systemPrompt = `You are an expert HR and recruitment AI assistant. Your task is to analyze CVs and job descriptions to provide accurate match scores and insights.
 
 Analyze the provided CV and job description, then return a JSON object with:
-1. score: A number between 0-100 representing how well the candidate matches the job
-2. summary: A brief summary (2-3 sentences) of why the candidate is a good fit
-3. matchingSkills: Array of skills that match between CV and job description
-4. missingSkills: Array of skills mentioned in job description but not in CV
-5. extraSkills: Array of relevant skills the candidate has that aren't mentioned in the job description
+1. score: A number between 0-100 representing how well the candidate matches the job requirements
+2. summary: A short paragraph (3-4 sentences) explaining why the candidate is a good fit or not, highlighting key strengths and gaps
+3. matchingSkills: Array of the TOP 5 most relevant skills that match between CV and job description
+4. missingSkills: Array of the TOP 3 most important skills mentioned in job description but not found in CV
+5. extraSkills: Array of relevant additional skills the candidate has that aren't mentioned in the job description
 
-Be objective, professional, and focus on actual qualifications and requirements.`;
+Be objective, professional, and focus on actual qualifications and requirements. Prioritize the most relevant skills.`;
 
     const userPrompt = `Job Description:
 ${jobDescription}
@@ -62,26 +62,26 @@ Please analyze this match and provide the results in the exact JSON format speci
                 properties: {
                   score: { 
                     type: "number",
-                    description: "Match score from 0-100"
+                    description: "Match score from 0-100 representing candidate fit"
                   },
                   summary: { 
                     type: "string",
-                    description: "Brief summary of why candidate is a good fit"
+                    description: "Short paragraph (3-4 sentences) explaining why candidate fits or not"
                   },
                   matchingSkills: {
                     type: "array",
                     items: { type: "string" },
-                    description: "Skills that match between CV and job"
+                    description: "Top 5 most relevant skills found in both CV and job description"
                   },
                   missingSkills: {
                     type: "array",
                     items: { type: "string" },
-                    description: "Skills in job description but not in CV"
+                    description: "Top 3 most important skills/experiences missing from CV but required in job"
                   },
                   extraSkills: {
                     type: "array",
                     items: { type: "string" },
-                    description: "Relevant skills candidate has not mentioned in job"
+                    description: "Additional relevant skills candidate has beyond job requirements"
                   }
                 },
                 required: ["score", "summary", "matchingSkills", "missingSkills", "extraSkills"],
