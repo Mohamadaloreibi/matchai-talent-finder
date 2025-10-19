@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { cvText, jobDescription } = await req.json();
+    const { cvText, jobDescription, candidateName, jobTitle, company, language = 'en' } = await req.json();
     console.log('Received match request');
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -20,16 +20,22 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const systemPrompt = `You are an expert HR and recruitment AI assistant. Your task is to analyze CVs and job descriptions to provide accurate match scores and insights.
+    const systemPrompt = `You are an expert HR and recruitment AI assistant specializing in comprehensive CV analysis. Your task is to provide detailed, actionable insights for candidate-job matching.
 
-Analyze the provided CV and job description, then return a JSON object with:
-1. score: A number between 0-100 representing how well the candidate matches the job requirements
-2. summary: A short paragraph (3-4 sentences) explaining why the candidate is a good fit or not, highlighting key strengths and gaps
-3. matchingSkills: Array of the TOP 5 most relevant skills that match between CV and job description
-4. missingSkills: Array of the TOP 3 most important skills mentioned in job description but not found in CV
-5. extraSkills: Array of relevant additional skills the candidate has that aren't mentioned in the job description
+Analyze the CV and job description thoroughly, then return a complete JSON object with:
+1. score: Overall match score (0-100)
+2. confidence_score: Your confidence in this assessment (0.0-1.0)
+3. summary: Concise 3-4 sentence paragraph explaining fit, strengths, and gaps
+4. matchingSkills: Top 5 most relevant matching skills
+5. missingSkills: Top 3 most critical missing skills from job requirements
+6. extraSkills: Additional valuable skills the candidate possesses
+7. weights: Breakdown scores for must-have (0-100), should-have (0-100), and nice-to-have (0-20) requirements
+8. evidence: Up to 6 specific quotes from CV or JD supporting the match, with source indicator
+9. star: Up to 3 STAR achievements (Situation, Task, Action, Result) extracted from CV
+10. tips: 5 actionable improvement tips with estimated impact (low/medium/high)
+11. bias_alert: Flag any potentially biased language in job description
 
-Be objective, professional, and focus on actual qualifications and requirements. Prioritize the most relevant skills.`;
+Be professional, objective, and data-driven. Focus on concrete evidence.`;
 
     const userPrompt = `Job Description:
 ${jobDescription}
@@ -37,7 +43,7 @@ ${jobDescription}
 Candidate CV:
 ${cvText}
 
-Please analyze this match and provide the results in the exact JSON format specified.`;
+Please analyze this match comprehensively and provide results in the specified JSON format.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -56,36 +62,98 @@ Please analyze this match and provide the results in the exact JSON format speci
             type: "function",
             function: {
               name: "provide_match_analysis",
-              description: "Return the CV-job match analysis",
+              description: "Return comprehensive CV-job match analysis",
               parameters: {
                 type: "object",
                 properties: {
                   score: { 
                     type: "number",
-                    description: "Match score from 0-100 representing candidate fit"
+                    description: "Overall match score 0-100"
+                  },
+                  confidence_score: {
+                    type: "number",
+                    description: "Confidence in assessment 0.0-1.0"
                   },
                   summary: { 
                     type: "string",
-                    description: "Short paragraph (3-4 sentences) explaining why candidate fits or not"
+                    description: "Concise 3-4 sentence explanation of fit"
                   },
                   matchingSkills: {
                     type: "array",
                     items: { type: "string" },
-                    description: "Top 5 most relevant skills found in both CV and job description"
+                    description: "Top 5 matching skills"
                   },
                   missingSkills: {
                     type: "array",
                     items: { type: "string" },
-                    description: "Top 3 most important skills/experiences missing from CV but required in job"
+                    description: "Top 3 critical missing skills"
                   },
                   extraSkills: {
                     type: "array",
                     items: { type: "string" },
-                    description: "Additional relevant skills candidate has beyond job requirements"
+                    description: "Additional valuable skills"
+                  },
+                  weights: {
+                    type: "object",
+                    properties: {
+                      must: { type: "number", description: "Must-have score 0-100" },
+                      should: { type: "number", description: "Should-have score 0-100" },
+                      nice_bonus: { type: "number", description: "Nice-to-have bonus 0-20" }
+                    }
+                  },
+                  evidence: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        quote: { type: "string" },
+                        source: { type: "string", enum: ["CV", "JD"] }
+                      }
+                    },
+                    description: "Up to 6 supporting quotes"
+                  },
+                  star: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        s: { type: "string", description: "Situation" },
+                        t: { type: "string", description: "Task" },
+                        a: { type: "string", description: "Action" },
+                        r: { type: "string", description: "Result" }
+                      }
+                    },
+                    description: "Up to 3 STAR achievements"
+                  },
+                  tips: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        text: { type: "string" },
+                        estimated_gain: { type: "string", enum: ["low", "medium", "high"] }
+                      }
+                    },
+                    description: "5 improvement tips"
+                  },
+                  bias_alert: {
+                    type: "object",
+                    properties: {
+                      flagged: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            phrase: { type: "string" },
+                            reason: { type: "string" },
+                            alt: { type: "string", description: "Neutral alternative" }
+                          }
+                        }
+                      }
+                    }
                   }
                 },
-                required: ["score", "summary", "matchingSkills", "missingSkills", "extraSkills"],
-                additionalProperties: false
+                required: ["score", "confidence_score", "summary", "matchingSkills", "missingSkills", "extraSkills", "weights", "evidence", "star", "tips", "bias_alert"]
               }
             }
           }
@@ -126,8 +194,18 @@ Please analyze this match and provide the results in the exact JSON format speci
 
     const analysisResult = JSON.parse(toolCall.function.arguments);
 
+    // Add metadata to result
+    const enrichedResult = {
+      ...analysisResult,
+      candidate_name: candidateName || "Unknown Candidate",
+      job_title: jobTitle || "Position",
+      company: company || "Company",
+      created_at_iso: new Date().toISOString(),
+      language: language
+    };
+
     return new Response(
-      JSON.stringify(analysisResult),
+      JSON.stringify(enrichedResult),
       { 
         headers: { 
           ...corsHeaders, 

@@ -15,6 +15,23 @@ interface MatchResultData {
   matchingSkills: string[];
   missingSkills: string[];
   extraSkills: string[];
+  confidence_score?: number;
+  weights?: {
+    must: number;
+    should: number;
+    nice_bonus: number;
+  };
+  evidence?: Array<{ quote: string; source: string }>;
+  star?: Array<{ s: string; t: string; a: string; r: string }>;
+  tips?: Array<{ text: string; estimated_gain: 'low' | 'medium' | 'high' }>;
+  bias_alert?: {
+    flagged: Array<{ phrase: string; reason: string; alt: string }>;
+  };
+  candidate_name?: string;
+  job_title?: string;
+  company?: string;
+  created_at_iso?: string;
+  language?: 'en' | 'sv' | 'ar';
 }
 
 interface HistoryItem {
@@ -91,6 +108,10 @@ const Index = () => {
         body: {
           cvText: cvContent,
           jobDescription: jobContent,
+          candidateName: cvFile?.name?.replace(/\.[^/.]+$/, "") || "Candidate",
+          jobTitle: "Position", // Can be extracted from job description in future
+          company: "Company", // Can be extracted from job description in future
+          language: "en" // Default to English, can be made configurable
         },
       });
 

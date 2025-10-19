@@ -19,6 +19,18 @@ interface CandidateResult {
   matchingSkills: string[];
   missingSkills: string[];
   extraSkills: string[];
+  confidence_score?: number;
+  weights?: {
+    must: number;
+    should: number;
+    nice_bonus: number;
+  };
+  evidence?: Array<{ quote: string; source: string }>;
+  star?: Array<{ s: string; t: string; a: string; r: string }>;
+  tips?: Array<{ text: string; estimated_gain: 'low' | 'medium' | 'high' }>;
+  bias_alert?: {
+    flagged: Array<{ phrase: string; reason: string; alt: string }>;
+  };
 }
 
 interface DashboardData {
@@ -97,6 +109,10 @@ const Dashboard = () => {
           body: {
             cvText: cvContent,
             jobDescription: jobContent,
+            candidateName: cvFile.name.replace(/\.[^/.]+$/, ""),
+            jobTitle: "Position", // Can be extracted from job description
+            company: "Company", // Can be extracted from job description
+            language: "en" // Default to English
           },
         });
 
@@ -113,6 +129,12 @@ const Dashboard = () => {
           matchingSkills: data.matchingSkills,
           missingSkills: data.missingSkills,
           extraSkills: data.extraSkills,
+          confidence_score: data.confidence_score,
+          weights: data.weights,
+          evidence: data.evidence,
+          star: data.star,
+          tips: data.tips,
+          bias_alert: data.bias_alert,
         });
       }
 

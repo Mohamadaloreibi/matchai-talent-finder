@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, XCircle, PlusCircle, RotateCcw, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import jsPDF from "jspdf";
+import { generateMatchPDF } from "@/lib/pdfGenerator";
 
 interface MatchResultProps {
   result: {
@@ -12,6 +12,23 @@ interface MatchResultProps {
     matchingSkills: string[];
     missingSkills: string[];
     extraSkills: string[];
+    confidence_score?: number;
+    weights?: {
+      must: number;
+      should: number;
+      nice_bonus: number;
+    };
+    evidence?: Array<{ quote: string; source: string }>;
+    star?: Array<{ s: string; t: string; a: string; r: string }>;
+    tips?: Array<{ text: string; estimated_gain: 'low' | 'medium' | 'high' }>;
+    bias_alert?: {
+      flagged: Array<{ phrase: string; reason: string; alt: string }>;
+    };
+    candidate_name?: string;
+    job_title?: string;
+    company?: string;
+    created_at_iso?: string;
+    language?: 'en' | 'sv' | 'ar';
   };
   onReset: () => void;
   cvName?: string;
@@ -30,153 +47,28 @@ export const MatchResult = ({ result, onReset, cvName }: MatchResultProps) => {
     return "bg-destructive";
   };
 
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
-    let yPosition = 20;
-
-    // Header with logo placeholder
-    doc.setFillColor(0, 102, 204);
-    doc.rect(0, 0, pageWidth, 40, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.setFont("helvetica", "bold");
-    doc.text("MatchAI", margin, 25);
+  const handleGeneratePDF = () => {
+    // Prepare complete result object for PDF generation
+    const pdfData = {
+      candidate_name: result.candidate_name || cvName || "Candidate",
+      job_title: result.job_title || "Position",
+      company: result.company || "Company",
+      created_at_iso: result.created_at_iso || new Date().toISOString(),
+      language: result.language || 'en' as const,
+      score: result.score,
+      confidence_score: result.confidence_score || 0.85,
+      summary: result.summary,
+      matchingSkills: result.matchingSkills,
+      missingSkills: result.missingSkills,
+      extraSkills: result.extraSkills,
+      weights: result.weights || { must: 70, should: 60, nice_bonus: 10 },
+      evidence: result.evidence || [],
+      star: result.star || [],
+      tips: result.tips || [],
+      bias_alert: result.bias_alert || { flagged: [] }
+    };
     
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    const currentDate = new Date().toLocaleDateString("en-US", { 
-      year: "numeric", 
-      month: "long", 
-      day: "numeric" 
-    });
-    doc.text(currentDate, pageWidth - margin - 60, 25);
-
-    yPosition = 60;
-    doc.setTextColor(0, 0, 0);
-
-    // Title
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("CV Match Analysis Report", margin, yPosition);
-    yPosition += 15;
-
-    if (cvName) {
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Candidate CV: ${cvName}`, margin, yPosition);
-      yPosition += 10;
-    }
-
-    // Match Score
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("Match Score", margin, yPosition);
-    yPosition += 8;
-    
-    doc.setFontSize(32);
-    const scoreColor = result.score >= 80 ? [34, 197, 94] : 
-                       result.score >= 60 ? [234, 179, 8] : [239, 68, 68];
-    doc.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
-    doc.text(`${result.score}%`, margin, yPosition);
-    yPosition += 15;
-
-    // Summary
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("Summary", margin, yPosition);
-    yPosition += 8;
-    
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    const summaryLines = doc.splitTextToSize(result.summary, pageWidth - 2 * margin);
-    doc.text(summaryLines, margin, yPosition);
-    yPosition += summaryLines.length * 6 + 10;
-
-    // Matching Skills
-    if (result.matchingSkills.length > 0) {
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(34, 197, 94);
-      doc.text("✓ Matching Skills", margin, yPosition);
-      yPosition += 8;
-      
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(0, 0, 0);
-      result.matchingSkills.forEach((skill) => {
-        doc.text(`• ${skill}`, margin + 5, yPosition);
-        yPosition += 6;
-      });
-      yPosition += 5;
-    }
-
-    // Missing Skills
-    if (result.missingSkills.length > 0) {
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(239, 68, 68);
-      doc.text("✗ Missing Skills", margin, yPosition);
-      yPosition += 8;
-      
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(0, 0, 0);
-      result.missingSkills.forEach((skill) => {
-        doc.text(`• ${skill}`, margin + 5, yPosition);
-        yPosition += 6;
-      });
-      yPosition += 5;
-    }
-
-    // Extra Skills
-    if (result.extraSkills.length > 0) {
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(234, 179, 8);
-      doc.text("+ Additional Skills", margin, yPosition);
-      yPosition += 8;
-      
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(0, 0, 0);
-      result.extraSkills.forEach((skill) => {
-        doc.text(`• ${skill}`, margin + 5, yPosition);
-        yPosition += 6;
-      });
-    }
-
-    // Footer
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(9);
-      doc.setTextColor(128, 128, 128);
-      doc.text(
-        "Built with ❤️ by Futurearc",
-        pageWidth / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: "center" }
-      );
-    }
-
-    // Save the PDF
-    const fileName = cvName 
-      ? `MatchAI_Report_${cvName.replace(/\.[^/.]+$/, "")}_${Date.now()}.pdf`
-      : `MatchAI_Report_${Date.now()}.pdf`;
-    doc.save(fileName);
+    generateMatchPDF(pdfData);
   };
 
   return (
@@ -265,7 +157,7 @@ export const MatchResult = ({ result, onReset, cvName }: MatchResultProps) => {
 
       {/* Actions */}
       <div className="flex justify-center gap-4">
-        <Button onClick={generatePDF} size="lg" variant="outline" className="gap-2">
+        <Button onClick={handleGeneratePDF} size="lg" variant="outline" className="gap-2">
           <Download className="w-4 h-4" />
           Download Report
         </Button>
