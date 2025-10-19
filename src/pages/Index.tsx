@@ -225,7 +225,7 @@ const Index = () => {
           </div>
         ) : (
           <div className="max-w-6xl mx-auto">
-            <MatchResult result={matchResult} onReset={handleReset} />
+            <MatchResult result={matchResult} onReset={handleReset} cvName={cvFile?.name} />
           </div>
         )}
       </main>
