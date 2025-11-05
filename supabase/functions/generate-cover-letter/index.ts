@@ -37,34 +37,37 @@ serve(async (req) => {
     }
 
     // Build the LLM prompt
-    const systemPrompt = "You are an expert career writer who crafts concise, human-sounding cover letters that align a candidate's CV to a given Job Description. You avoid clichés, keep it factual and specific, and highlight 2–3 overlapping skills and one concrete experience with results.";
+    const prompt = `
+You are a professional Swedish and English career writer who crafts realistic, well-structured, and human-sounding cover letters for job applications.
+You must always produce grammatically correct, fluent text with a clear structure, appropriate tone, and content that aligns closely with the candidate's actual background.
 
-    const languageInstruction = target_language === "sv" ? "svenska" : "English";
-    const toneMap: Record<string, string> = {
-      professional: "professional",
-      friendly: "friendly",
-      concise: "concise",
-      story: "story-driven",
-    };
-    const toneInstruction = toneMap[tone] || "professional";
+Context:
+Candidate name: ${candidate_name}
+Role: ${job_title}
+Company: ${company}
+Language: ${target_language}
+Tone: ${tone}
+CV text:
+"""${cv_text}"""
+Job description:
+"""${job_description}"""
+Match summary (if available): ${match_summary || 'N/A'}
+Top overlapping skills: ${matching_skills?.join(', ') || 'N/A'}
 
-    const userPrompt = `Write a personalized cover letter for role: ${job_title || "the position"} at ${company || "the company"}.
-Candidate: ${candidate_name}.
-CV (raw): \`\`\`${cv_text}\`\`\`
-Job Description (raw): \`\`\`${job_description}\`\`\`
-Match summary (optional): ${match_summary || "N/A"}
-Top overlapping skills (optional): ${matching_skills?.join(", ") || "N/A"}
+Write a complete, polished cover letter that:
+1. Stays under 300 words.
+2. Uses a natural, confident and professional tone.
+3. Highlights 2–3 skills that appear in both CV and JD (avoid listing too many).
+4. Mentions ONE specific experience or project from the CV with clear results or impact.
+5. Avoids generic filler like "Jag är passionerad om teknik" or "Jag tror att".
+6. Keeps language authentic — no awkward phrasing or repetition.
+7. Ends with a short, polite closing line that invites follow-up.
 
-Requirements:
-- Language: ${languageInstruction}.
-- Tone: ${toneInstruction}.
-- 250–300 words max.
-- Use a natural, confident voice (no robotic phrasing).
-- Mention 2–3 overlapping skills explicitly as they appear in the JD.
-- Reference ONE concrete project/experience from the CV and its outcome (numbers if available).
-- Close with a short, polite call-to-action.
+If the target language is Swedish, ensure correct Swedish grammar, sentence flow, and formality for business context.
+If English, ensure natural phrasing for UK/EU professional tone (not US overly formal).
 
-Output ONLY the finalized letter text with line breaks — no markdown, no preface.`;
+Output only the finished letter text, with paragraph breaks and no Markdown or code fences.
+`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -75,8 +78,7 @@ Output ONLY the finalized letter text with line breaks — no markdown, no prefa
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { role: "user", content: prompt },
         ],
       }),
     });
@@ -107,7 +109,7 @@ Output ONLY the finalized letter text with line breaks — no markdown, no prefa
     return new Response(
       JSON.stringify({
         language: target_language,
-        tone: toneInstruction,
+        tone: tone,
         cover_letter_text: coverLetterText,
       }),
       {
