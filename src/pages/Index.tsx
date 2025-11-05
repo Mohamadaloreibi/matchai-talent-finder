@@ -4,6 +4,7 @@ import { UploadSection } from "@/components/UploadSection";
 import { MatchResult } from "@/components/MatchResult";
 import { LoadingState } from "@/components/LoadingState";
 import { MatchHistory } from "@/components/MatchHistory";
+import { CoverLetterGenerator } from "@/components/CoverLetterGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, LayoutDashboard } from "lucide-react";
@@ -49,6 +50,8 @@ const Index = () => {
   const [jobText, setJobText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [matchResult, setMatchResult] = useState<MatchResultData | null>(null);
+  const [analyzedCvText, setAnalyzedCvText] = useState("");
+  const [analyzedJobText, setAnalyzedJobText] = useState("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const { toast } = useToast();
 
@@ -118,6 +121,8 @@ const Index = () => {
       if (error) throw error;
 
       setMatchResult(data);
+      setAnalyzedCvText(cvContent);
+      setAnalyzedJobText(jobContent);
       saveToHistory(data);
       
       toast({
@@ -150,6 +155,8 @@ const Index = () => {
     setJobFile(null);
     setJobText("");
     setMatchResult(null);
+    setAnalyzedCvText("");
+    setAnalyzedJobText("");
   };
 
   const canAnalyze = (cvFile || cvText) && (jobFile || jobText);
@@ -245,8 +252,19 @@ const Index = () => {
             <LoadingState />
           </div>
         ) : (
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto space-y-6">
             <MatchResult result={matchResult} onReset={handleReset} cvName={cvFile?.name} />
+            
+            {/* Cover Letter Generator */}
+            <CoverLetterGenerator
+              candidateName={matchResult.candidate_name || cvFile?.name?.replace(/\.[^/.]+$/, "") || "Candidate"}
+              jobTitle={matchResult.job_title || "Position"}
+              company={matchResult.company || "Company"}
+              cvText={analyzedCvText}
+              jobDescription={analyzedJobText}
+              matchSummary={matchResult.summary}
+              matchingSkills={matchResult.matchingSkills}
+            />
           </div>
         )}
       </main>
