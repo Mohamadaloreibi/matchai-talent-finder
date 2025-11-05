@@ -47,26 +47,32 @@ Role: ${job_title}
 Company: ${company}
 Language: ${target_language}
 Tone: ${tone}
+
 CV text:
 """${cv_text}"""
+
 Job description:
 """${job_description}"""
-Match summary (if available): ${match_summary || 'N/A'}
-Top overlapping skills: ${matching_skills?.join(', ') || 'N/A'}
 
-Write a complete, polished cover letter that:
-1. Stays under 300 words.
-2. Uses a natural, confident and professional tone.
-3. Highlights 2–3 skills that appear in both CV and JD (avoid listing too many).
-4. Mentions ONE specific experience or project from the CV with clear results or impact.
-5. Avoids generic filler like "Jag är passionerad om teknik" or "Jag tror att".
-6. Keeps language authentic — no awkward phrasing or repetition.
-7. Ends with a short, polite closing line that invites follow-up.
+Match summary (if available):
+${match_summary || 'N/A'}
 
-If the target language is Swedish, ensure correct Swedish grammar, sentence flow, and formality for business context.
-If English, ensure natural phrasing for UK/EU professional tone (not US overly formal).
+Top overlapping skills:
+${matching_skills?.join(', ') || 'N/A'}
 
-Output only the finished letter text, with paragraph breaks and no Markdown or code fences.
+⚙️ Requirements:
+1. Maximum 300 words.
+2. Write in a natural, confident and professional tone.
+3. Mention 2–3 overlapping skills that appear in both the CV and the Job Description.
+4. Reference ONE specific experience or project from the CV with clear results or impact.
+5. NEVER invent or guess names of schools, companies or locations that are not explicitly mentioned in the CV.
+6. Avoid generic filler phrases such as "Jag tror att" or "Jag brinner för teknik".
+7. If language = Swedish, ensure correct business Swedish grammar and sentence flow.
+8. If language = English, ensure natural British English phrasing.
+9. End with a short, polite closing that fits the language context.
+10. Do not include placeholders like [Company Name] or markdown formatting.
+
+Return only the finalized letter text, with paragraph breaks, and nothing else.
 `;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
