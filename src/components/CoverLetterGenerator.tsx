@@ -177,6 +177,15 @@ export const CoverLetterGenerator = ({
   }
 };
 
+  return (
+    <Card className="p-6 space-y-6">
+      <div className="space-y-2">
+        <h3 className="text-xl font-semibold text-foreground">AI-Generated Cover Letter</h3>
+        <p className="text-sm text-muted-foreground">
+          Generate a personalized cover letter based on your CV and the job description.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Language Selector */}
         <div className="space-y-2">
