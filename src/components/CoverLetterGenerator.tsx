@@ -33,6 +33,9 @@ export const CoverLetterGenerator = ({
   const [generatedLetter, setGeneratedLetter] = useState<string>("");
   const [detectedLanguage, setDetectedLanguage] = useState<string>("en");
   const { toast } = useToast();
+    // 🔹 Refine Letter states
+  const [refineInstruction, setRefineInstruction] = useState("");
+  const [loadingRefine, setLoadingRefine] = useState(false);
 
   // Load saved letter from localStorage on mount
   useEffect(() => {
@@ -142,25 +145,37 @@ export const CoverLetterGenerator = ({
       description: "Cover letter PDF has been saved.",
     });
   };
+  
 
-  const handleRefine = () => {
-    // Re-trigger generation with current settings
-    handleGenerate();
-  };
-
-  return (
-    <Card className="p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-          <Mail className="w-6 h-6 text-primary-foreground" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-semibold text-foreground">AI-Generated Cover Letter</h2>
-          <p className="text-sm text-muted-foreground">
-            Generate a personalized cover letter based on your match
-          </p>
-        </div>
-      </div>
+  const handleRefine = async () => {
+  if (!generatedLetter || !refineInstruction) return;
+  setLoadingRefine(true);
+  try {
+    const res = await fetch("/api/refine-cover-letter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        refine_instruction: refineInstruction,   // t.ex. "kortare och mer konkret"
+        target_language: detectedLanguage,       // "sv" | "en" | "auto"
+        tone,                                    // professional | friendly | concise | story
+        cv_text: cvText,
+        current_letter: generatedLetter,
+      }),
+    });
+    const data = await res.json();
+    if (data.refined_letter) {
+      setGeneratedLetter(data.refined_letter);
+      toast({ title: "Brev förbättrat ✨", description: "AI:n har förfinat brevet." });
+    } else {
+      toast({ title: "Ingen förbättring", description: "Kunde inte förfina brevet.", variant: "destructive" });
+    }
+  } catch (e) {
+    console.error(e);
+    toast({ title: "Fel vid förfining", description: "Försök igen.", variant: "destructive" });
+  } finally {
+    setLoadingRefine(false);
+  }
+};
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Language Selector */}
