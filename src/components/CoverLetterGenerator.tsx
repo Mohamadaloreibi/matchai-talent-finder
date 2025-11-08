@@ -5,8 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 import { Mail, Copy, FileDown, RefreshCw } from "lucide-react";
 import { generateCoverLetterPDF } from "@/lib/coverLetterPdfGenerator";
+import { toast as sonnerToast } from "sonner";
 
 interface CoverLetterGeneratorProps {
   candidateName: string;
@@ -32,6 +34,7 @@ export const CoverLetterGenerator = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedLetter, setGeneratedLetter] = useState<string>("");
   const [detectedLanguage, setDetectedLanguage] = useState<string>("en");
+  const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
   // 🔹 Refine Letter states
   const [refineInstruction, setRefineInstruction] = useState("");
@@ -39,6 +42,19 @@ export const CoverLetterGenerator = ({
   // 🔹 Explain Letter states
   const [explanation, setExplanation] = useState<string>("");
   const [loadingExplanation, setLoadingExplanation] = useState(false);
+
+  // Track user authentication
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Load saved letter from localStorage on mount
   useEffect(() => {
@@ -101,10 +117,44 @@ export const CoverLetterGenerator = ({
         })
       );
 
-      toast({
-        title: "Cover Letter Generated!",
-        description: "Your personalized cover letter is ready.",
-      });
+      // Save to Supabase if user is logged in
+      if (user) {
+        try {
+          const { error: saveError } = await supabase
+            .from("saved_letters")
+            .insert({
+              user_id: user.id,
+              job_title: jobTitle,
+              company: company,
+              letter_text: letterText,
+              cv_text: cvText,
+              job_description: jobDescription,
+              tone: tone,
+              language: lang,
+            });
+
+          if (saveError) throw saveError;
+
+          toast({
+            title: "Cover Letter Generated & Saved!",
+            description: "Your personalized cover letter is ready and saved.",
+          });
+        } catch (saveError) {
+          console.error("Failed to save letter:", saveError);
+          toast({
+            title: "Cover Letter Generated!",
+            description: "Letter created but couldn't be saved to your account.",
+          });
+        }
+      } else {
+        toast({
+          title: "Cover Letter Generated!",
+          description: "Your personalized cover letter is ready.",
+        });
+        sonnerToast.info("Sign in to save your letters permanently", {
+          duration: 5000,
+        });
+      }
     } catch (error: any) {
       console.error("Error generating cover letter:", error);
       toast({

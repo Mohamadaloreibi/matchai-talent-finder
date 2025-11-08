@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      saved_letters: {
+        Row: {
+          company: string
+          created_at: string
+          cv_text: string | null
+          id: string
+          job_description: string | null
+          job_title: string
+          language: string | null
+          letter_text: string
+          tone: string | null
+          user_id: string
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          cv_text?: string | null
+          id?: string
+          job_description?: string | null
+          job_title: string
+          language?: string | null
+          letter_text: string
+          tone?: string | null
+          user_id: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          cv_text?: string | null
+          id?: string
+          job_description?: string | null
+          job_title?: string
+          language?: string | null
+          letter_text?: string
+          tone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

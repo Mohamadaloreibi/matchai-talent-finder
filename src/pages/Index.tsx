@@ -7,8 +7,9 @@ import { MatchHistory } from "@/components/MatchHistory";
 import { CoverLetterGenerator } from "@/components/CoverLetterGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, LayoutDashboard } from "lucide-react";
+import { Sparkles, LayoutDashboard, BookMarked } from "lucide-react";
 import { Link } from "react-router-dom";
+import { AuthButton } from "@/components/AuthButton";
 
 interface MatchResultData {
   score: number;
@@ -173,12 +174,21 @@ const Index = () => {
               </div>
               <h1 className="text-2xl font-bold text-foreground">MatchAI</h1>
             </div>
-            <Link to="/dashboard">
-              <Button variant="outline" className="gap-2">
-                <LayoutDashboard className="w-4 h-4" />
-                Employer Dashboard
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link to="/my-letters">
+                <Button variant="outline" className="gap-2">
+                  <BookMarked className="w-4 h-4" />
+                  My Letters
+                </Button>
+              </Link>
+              <Link to="/dashboard">
+                <Button variant="outline" className="gap-2">
+                  <LayoutDashboard className="w-4 h-4" />
+                  Employer Dashboard
+                </Button>
+              </Link>
+              <AuthButton />
+            </div>
           </div>
         </div>
       </header>
