@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,42 +6,87 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { z } from "zod";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Mail } from "lucide-react";
 
+
+const authSchema = z.object({
+  email: z.string().trim().email({ message: "Invalid email address" }).max(255, { message: "Email must be less than 255 characters" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }).max(72, { message: "Password must be less than 72 characters" })
+});
 
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user is already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate("/");
+      }
+    });
+  }, [navigate]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setShowVerificationMessage(false);
 
     try {
+      // Validate input
+      const validatedData = authSchema.parse({ email: email.trim(), password });
+
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
+        const { data, error } = await supabase.auth.signUp({
+          email: validatedData.email,
+          password: validatedData.password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
           },
         });
+        
         if (error) throw error;
-        toast.success("Account created! You can now sign in.");
-        setIsSignUp(false);
+
+        // Check if email confirmation is required
+        if (data?.user && !data.session) {
+          setShowVerificationMessage(true);
+          toast.success("Check your email for the verification link!");
+        } else if (data?.session) {
+          toast.success("Account created and signed in!");
+          navigate("/");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: validatedData.email,
+          password: validatedData.password,
         });
-        if (error) throw error;
-        toast.success("Signed in successfully!");
-        navigate("/");
+        
+        if (error) {
+          // Handle specific error cases
+          if (error.message.includes("Email not confirmed")) {
+            toast.error("Please verify your email before signing in. Check your inbox.");
+          } else if (error.message.includes("Invalid login credentials")) {
+            toast.error("Invalid email or password. Please try again.");
+          } else {
+            throw error;
+          }
+        } else {
+          toast.success("Signed in successfully!");
+          navigate("/");
+        }
       }
     } catch (error: any) {
-      toast.error(error.message || "Authentication failed");
+      if (error instanceof z.ZodError) {
+        toast.error(error.issues[0].message);
+      } else {
+        toast.error(error.message || "Authentication failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -60,6 +105,16 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {showVerificationMessage && (
+            <Alert>
+              <Mail className="h-4 w-4" />
+              <AlertDescription>
+                A verification email has been sent to <strong>{email}</strong>. 
+                Please check your inbox and click the verification link to activate your account.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleEmailAuth} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
