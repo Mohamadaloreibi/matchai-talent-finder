@@ -26,6 +26,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const [showResetEmailSent, setShowResetEmailSent] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -158,6 +159,34 @@ const Auth = () => {
     }
   };
 
+  const handleResendVerification = async () => {
+    setResendingVerification(true);
+
+    try {
+      const validatedEmail = z.string().trim().email().parse(email.trim());
+      
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: validatedEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Verification email resent! Check your inbox.");
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast.error("Please enter a valid email address");
+      } else {
+        toast.error(error.message || "Failed to resend verification email");
+      }
+    } finally {
+      setResendingVerification(false);
+    }
+  };
+
   // Password Reset Form
   if (isResettingPassword) {
     return (
@@ -265,9 +294,20 @@ const Auth = () => {
           {showVerificationMessage && (
             <Alert>
               <Mail className="h-4 w-4" />
-              <AlertDescription>
-                A verification email has been sent to <strong>{email}</strong>. 
-                Please check your inbox and click the verification link to activate your account.
+              <AlertDescription className="space-y-2">
+                <div>
+                  A verification email has been sent to <strong>{email}</strong>. 
+                  Please check your inbox and click the verification link to activate your account.
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendVerification}
+                  disabled={resendingVerification}
+                  className="mt-2"
+                >
+                  {resendingVerification ? "Sending..." : "Resend Verification Email"}
+                </Button>
               </AlertDescription>
             </Alert>
           )}
