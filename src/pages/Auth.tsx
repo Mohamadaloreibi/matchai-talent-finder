@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Mail } from "lucide-react";
+import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 
 
 const authSchema = z.object({
@@ -211,6 +212,7 @@ const Auth = () => {
                   required
                   minLength={6}
                 />
+                <PasswordStrengthIndicator password={newPassword} />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Updating..." : "Update Password"}
@@ -335,6 +337,7 @@ const Auth = () => {
                 required
                 minLength={6}
               />
+              {isSignUp && <PasswordStrengthIndicator password={password} />}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
