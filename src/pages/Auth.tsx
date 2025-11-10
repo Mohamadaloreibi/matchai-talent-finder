@@ -20,8 +20,12 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+  const [showResetEmailSent, setShowResetEmailSent] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,6 +35,13 @@ const Auth = () => {
         navigate("/");
       }
     });
+
+    // Check if this is a password recovery callback
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get('type');
+    if (type === 'recovery') {
+      setIsResettingPassword(true);
+    }
   }, [navigate]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -92,6 +103,152 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setShowResetEmailSent(false);
+
+    try {
+      const validatedEmail = z.string().trim().email().parse(email.trim());
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(validatedEmail, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) throw error;
+
+      setShowResetEmailSent(true);
+      toast.success("Password reset email sent! Check your inbox.");
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast.error("Please enter a valid email address");
+      } else {
+        toast.error(error.message || "Failed to send reset email");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const validatedPassword = z.string().min(6).max(72).parse(newPassword);
+
+      const { error } = await supabase.auth.updateUser({
+        password: validatedPassword,
+      });
+
+      if (error) throw error;
+
+      toast.success("Password updated successfully!");
+      setIsResettingPassword(false);
+      setNewPassword("");
+      navigate("/");
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.issues[0].message);
+      } else {
+        toast.error(error.message || "Failed to update password");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Password Reset Form
+  if (isResettingPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Set New Password</CardTitle>
+            <CardDescription>
+              Enter your new password below
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New Password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Updating..." : "Update Password"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Forgot Password Form
+  if (isForgotPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Reset Password</CardTitle>
+            <CardDescription>
+              Enter your email address and we'll send you a reset link
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {showResetEmailSent && (
+              <Alert>
+                <Mail className="h-4 w-4" />
+                <AlertDescription>
+                  Password reset email sent to <strong>{email}</strong>. 
+                  Please check your inbox and click the link to reset your password.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Sending..." : "Send Reset Link"}
+              </Button>
+            </form>
+
+            <div className="text-center">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setIsForgotPassword(false);
+                  setShowResetEmailSent(false);
+                }}
+                disabled={loading}
+              >
+                Back to Sign In
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
@@ -144,17 +301,28 @@ const Auth = () => {
             </Button>
           </form>
 
-          <div className="text-center text-sm">
+          <div className="text-center text-sm space-y-2">
             <button
               type="button"
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-primary hover:underline"
+              className="text-primary hover:underline block w-full"
               disabled={loading}
             >
               {isSignUp
                 ? "Already have an account? Sign in"
                 : "Don't have an account? Sign up"}
             </button>
+            
+            {!isSignUp && (
+              <button
+                type="button"
+                onClick={() => setIsForgotPassword(true)}
+                className="text-muted-foreground hover:text-primary hover:underline block w-full"
+                disabled={loading}
+              >
+                Forgot your password?
+              </button>
+            )}
           </div>
 
           <div className="text-center">
