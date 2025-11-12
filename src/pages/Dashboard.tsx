@@ -7,8 +7,8 @@ import { UploadSection } from "@/components/UploadSection";
 import { CandidateTable } from "@/components/CandidateTable";
 import { LoadingState } from "@/components/LoadingState";
 import { ComparisonDialog } from "@/components/ComparisonDialog";
-import { Sparkles, FileDown, Home, Users, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Header } from "@/components/Header";
+import { Sparkles, FileDown, Users, X } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -274,24 +274,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <h1 className="text-2xl font-bold text-foreground">MatchAI Dashboard</h1>
-            </div>
-            <Link to="/">
-              <Button variant="outline" className="gap-2">
-                <Home className="w-4 h-4" />
-                Home
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Header showDashboardLink={false} showHomeLink={true} showMyLettersLink={true} />
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-12">

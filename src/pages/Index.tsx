@@ -7,9 +7,8 @@ import { MatchHistory } from "@/components/MatchHistory";
 import { CoverLetterGenerator } from "@/components/CoverLetterGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, LayoutDashboard, BookMarked } from "lucide-react";
-import { Link } from "react-router-dom";
-import { AuthButton } from "@/components/AuthButton";
+import { Sparkles } from "lucide-react";
+import { Header } from "@/components/Header";
 
 interface MatchResultData {
   score: number;
@@ -165,33 +164,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <h1 className="text-2xl font-bold text-foreground">MatchAI</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link to="/my-letters">
-                <Button variant="outline" className="gap-2">
-                  <BookMarked className="w-4 h-4" />
-                  My Letters
-                </Button>
-              </Link>
-              <Link to="/dashboard">
-                <Button variant="outline" className="gap-2">
-                  <LayoutDashboard className="w-4 h-4" />
-                  Employer Dashboard
-                </Button>
-              </Link>
-              <AuthButton />
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header showDashboardLink={true} showMyLettersLink={true} />
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-12">

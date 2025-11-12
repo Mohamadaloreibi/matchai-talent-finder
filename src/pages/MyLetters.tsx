@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Trash2, FileText, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { AuthButton } from "@/components/AuthButton";
+import { Header } from "@/components/Header";
 
 interface SavedLetter {
   id: string;
@@ -117,49 +118,44 @@ const MyLetters = () => {
 
   if (selectedLetter) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
-        <div className="max-w-4xl mx-auto space-y-4">
-          <div className="flex items-center justify-between">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+        <Header showDashboardLink={true} showHomeLink={true} showMyLettersLink={false} />
+        <div className="container mx-auto p-4 pt-8">
+          <div className="max-w-4xl mx-auto space-y-4">
             <Button variant="outline" onClick={() => setSelectedLetter(null)}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to My Letters
             </Button>
-            <AuthButton />
+            <Card>
+              <CardHeader>
+                <CardTitle>{selectedLetter.job_title}</CardTitle>
+                <CardDescription>
+                  {selectedLetter.company} • {format(new Date(selectedLetter.created_at), "PPP")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {selectedLetter.letter_text}
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>{selectedLetter.job_title}</CardTitle>
-              <CardDescription>
-                {selectedLetter.company} • {format(new Date(selectedLetter.created_at), "PPP")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                {selectedLetter.letter_text}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">My Letters</h1>
-            <p className="text-muted-foreground">View and manage your saved cover letters</p>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+      <Header showDashboardLink={true} showHomeLink={true} showMyLettersLink={false} />
+      <div className="container mx-auto p-4 pt-8">
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">My Letters</h1>
+              <p className="text-muted-foreground">View and manage your saved cover letters</p>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/")}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Home
-            </Button>
-            <AuthButton />
-          </div>
-        </div>
 
         {letters.length === 0 ? (
           <Card>
@@ -208,7 +204,8 @@ const MyLetters = () => {
               </Card>
             ))}
           </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
