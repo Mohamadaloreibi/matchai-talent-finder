@@ -71,26 +71,27 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
   };
 
   return (
-    <Card className="overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12"></TableHead>
-            <TableHead>Candidate Name</TableHead>
-            <TableHead>
-              <Button
-                variant="ghost"
-                onClick={toggleSort}
-                className="gap-2 hover:bg-transparent"
-              >
-                Match Score
-                <ArrowUpDown className="w-4 h-4" />
-              </Button>
-            </TableHead>
-            <TableHead>Summary</TableHead>
-            <TableHead>Top Skills</TableHead>
-          </TableRow>
-        </TableHeader>
+    <div>
+      <Card className="overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12"></TableHead>
+              <TableHead>Candidate</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={toggleSort}
+                  className="gap-2 hover:bg-transparent"
+                >
+                  Match %
+                  <ArrowUpDown className="w-4 h-4" />
+                </Button>
+              </TableHead>
+              <TableHead>AI Summary</TableHead>
+              <TableHead>Key Strengths</TableHead>
+            </TableRow>
+          </TableHeader>
         <TableBody>
           {sortedCandidates.map((candidate) => (
             <>
@@ -219,5 +220,13 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
         </TableBody>
       </Table>
     </Card>
+    
+    {/* Legend */}
+    <div className="mt-2 text-[11px] text-muted-foreground">
+      Legend: <span className="text-emerald-600 font-medium">Matching</span> • 
+      <span className="text-rose-600 font-medium ml-2">Missing</span> • 
+      <span className="text-sky-600 font-medium ml-2">Extra</span>
+    </div>
+    </div>
   );
 };

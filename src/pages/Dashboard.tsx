@@ -333,12 +333,31 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-foreground">Candidate Rankings</h2>
-              <div className="flex gap-3">
-                <Button onClick={generatePDFReport} className="gap-2">
+            {/* Welcome Card */}
+            <Card className="mb-6 p-4 bg-muted/40 border border-muted rounded-lg">
+              <h2 className="text-xl font-semibold text-foreground">Welcome to MatchAI Dashboard</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Analyze and rank candidates instantly based on their CVs and the job description. 
+                MatchAI helps you identify top matches, skill gaps, and unique strengths — all powered by AI.
+              </p>
+            </Card>
+
+            {/* Header with Actions */}
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">AI-Powered Candidate Analysis</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Each score is calculated by comparing the candidate's CV to the job description with AI. 
+                  Green = Matching skills, Red = Missing skills, Blue = Extra skills.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={generatePDFReport} variant="outline" className="gap-2">
                   <FileDown className="w-4 h-4" />
-                  Generate Report
+                  Export Report
+                </Button>
+                <Button variant="secondary" className="gap-2">
+                  🔗 Share Candidate
                 </Button>
                 <Button onClick={handleReset} variant="outline">
                   New Analysis
