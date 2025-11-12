@@ -82,7 +82,7 @@ export const CandidateTable = ({
     
     const newSelection = selectedCandidates.includes(id)
       ? selectedCandidates.filter(candidateId => candidateId !== id)
-      : selectedCandidates.length < 3
+      : selectedCandidates.length < 6
         ? [...selectedCandidates, id]
         : selectedCandidates;
     
@@ -136,7 +136,7 @@ export const CandidateTable = ({
                       onCheckedChange={() => handleSelectCandidate(candidate.id)}
                       disabled={
                         !selectedCandidates.includes(candidate.id) && 
-                        selectedCandidates.length >= 3
+                        selectedCandidates.length >= 6
                       }
                     />
                   </TableCell>

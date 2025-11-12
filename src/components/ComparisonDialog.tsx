@@ -53,7 +53,13 @@ export const ComparisonDialog = ({
         </DialogHeader>
 
         <ScrollArea className="h-[calc(90vh-120px)] pr-4">
-          <div className={`grid gap-4 ${candidates.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          <div className={`grid gap-4 ${
+            candidates.length === 2 ? 'grid-cols-2' : 
+            candidates.length === 3 ? 'grid-cols-3' : 
+            candidates.length === 4 ? 'grid-cols-2' :
+            candidates.length === 5 ? 'grid-cols-3' :
+            'grid-cols-3'
+          }`}>
             {candidates.map((candidate) => (
               <Card key={candidate.id} className="flex flex-col">
                 <CardHeader className="pb-3">

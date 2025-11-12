@@ -239,10 +239,18 @@ const Dashboard = () => {
   };
 
   const handleCompare = () => {
-    if (selectedCandidates.length < 2 || selectedCandidates.length > 3) {
+    if (selectedCandidates.length < 2) {
       toast({
         title: "Invalid Selection",
-        description: "Please select 2-3 candidates to compare",
+        description: "Please select at least 2 candidates to compare",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (selectedCandidates.length > 6) {
+      toast({
+        title: "Too Many Selected",
+        description: "Please select maximum 6 candidates to compare",
         variant: "destructive",
       });
       return;
@@ -393,15 +401,19 @@ const Dashboard = () => {
             />
 
             {/* Floating Compare Button */}
-            {selectedCandidates.length >= 2 && selectedCandidates.length <= 3 && (
+            {selectedCandidates.length >= 2 && (
               <div className="fixed bottom-8 right-8 z-50">
                 <Button 
                   size="lg" 
                   onClick={handleCompare}
                   className="gap-2 shadow-lg"
+                  disabled={selectedCandidates.length > 6}
                 >
                   <Users className="w-5 h-5" />
                   Compare {selectedCandidates.length} Candidates
+                  {selectedCandidates.length > 6 && (
+                    <span className="text-xs">(Max 6)</span>
+                  )}
                 </Button>
               </div>
             )}
