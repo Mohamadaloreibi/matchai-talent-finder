@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -29,9 +30,15 @@ interface CandidateResult {
 
 interface CandidateTableProps {
   candidates: CandidateResult[];
+  selectedCandidates?: string[];
+  onSelectionChange?: (ids: string[]) => void;
 }
 
-export const CandidateTable = ({ candidates }: CandidateTableProps) => {
+export const CandidateTable = ({ 
+  candidates, 
+  selectedCandidates = [], 
+  onSelectionChange 
+}: CandidateTableProps) => {
   const [sortedCandidates, setSortedCandidates] = useState(
     [...candidates].sort((a, b) => b.score - a.score)
   );
@@ -70,6 +77,18 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
     setExpandedRows(newExpanded);
   };
 
+  const handleSelectCandidate = (id: string) => {
+    if (!onSelectionChange) return;
+    
+    const newSelection = selectedCandidates.includes(id)
+      ? selectedCandidates.filter(candidateId => candidateId !== id)
+      : selectedCandidates.length < 3
+        ? [...selectedCandidates, id]
+        : selectedCandidates;
+    
+    onSelectionChange(newSelection);
+  };
+
   return (
     <div>
       <Card className="overflow-hidden">
@@ -77,6 +96,7 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12"></TableHead>
+              {onSelectionChange && <TableHead className="w-12"></TableHead>}
               <TableHead>Candidate</TableHead>
               <TableHead>
                 <Button
@@ -109,6 +129,18 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
                     )}
                   </Button>
                 </TableCell>
+                {onSelectionChange && (
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedCandidates.includes(candidate.id)}
+                      onCheckedChange={() => handleSelectCandidate(candidate.id)}
+                      disabled={
+                        !selectedCandidates.includes(candidate.id) && 
+                        selectedCandidates.length >= 3
+                      }
+                    />
+                  </TableCell>
+                )}
                 <TableCell className="font-medium text-foreground">
                   {candidate.name}
                 </TableCell>
@@ -143,7 +175,7 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
               </TableRow>
               {expandedRows.has(candidate.id) && (
                 <TableRow>
-                  <TableCell colSpan={5} className="bg-muted/30">
+                  <TableCell colSpan={onSelectionChange ? 6 : 5} className="bg-muted/30">
                     <div className="p-4 space-y-4">
                       <div>
                         <h4 className="font-semibold text-foreground mb-2">Full Summary</h4>

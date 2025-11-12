@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { UploadSection } from "@/components/UploadSection";
 import { CandidateTable } from "@/components/CandidateTable";
 import { LoadingState } from "@/components/LoadingState";
-import { Sparkles, FileDown, Home } from "lucide-react";
+import { ComparisonDialog } from "@/components/ComparisonDialog";
+import { Sparkles, FileDown, Home, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -47,6 +48,8 @@ const Dashboard = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentDashboard, setCurrentDashboard] = useState<DashboardData | null>(null);
   const [savedDashboards, setSavedDashboards] = useState<DashboardData[]>([]);
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  const [showComparison, setShowComparison] = useState(false);
   const { toast } = useToast();
 
   // Load saved dashboards from localStorage
@@ -232,6 +235,24 @@ const Dashboard = () => {
     setJobText("");
     setCvFiles([]);
     setCurrentDashboard(null);
+    setSelectedCandidates([]);
+  };
+
+  const handleCompare = () => {
+    if (selectedCandidates.length < 2 || selectedCandidates.length > 3) {
+      toast({
+        title: "Invalid Selection",
+        description: "Please select 2-3 candidates to compare",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowComparison(true);
+  };
+
+  const getComparedCandidates = () => {
+    if (!currentDashboard) return [];
+    return currentDashboard.candidates.filter(c => selectedCandidates.includes(c.id));
   };
 
   return (
@@ -365,7 +386,32 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <CandidateTable candidates={currentDashboard.candidates} />
+            <CandidateTable 
+              candidates={currentDashboard.candidates}
+              selectedCandidates={selectedCandidates}
+              onSelectionChange={setSelectedCandidates}
+            />
+
+            {/* Floating Compare Button */}
+            {selectedCandidates.length >= 2 && selectedCandidates.length <= 3 && (
+              <div className="fixed bottom-8 right-8 z-50">
+                <Button 
+                  size="lg" 
+                  onClick={handleCompare}
+                  className="gap-2 shadow-lg"
+                >
+                  <Users className="w-5 h-5" />
+                  Compare {selectedCandidates.length} Candidates
+                </Button>
+              </div>
+            )}
+
+            {/* Comparison Dialog */}
+            <ComparisonDialog
+              open={showComparison}
+              onOpenChange={setShowComparison}
+              candidates={getComparedCandidates()}
+            />
           </div>
         )}
       </main>
