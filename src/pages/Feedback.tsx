@@ -7,6 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { MessageSquare, Send } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+
+const feedbackSchema = z.object({
+  email: z.string().email({ message: "Invalid email address" }).max(255).optional().or(z.literal("")),
+  message: z.string().trim().min(1, { message: "Please enter your feedback" }).max(2000, { message: "Feedback must be less than 2000 characters" })
+});
 
 const Feedback = () => {
   const [email, setEmail] = useState("");
@@ -16,20 +23,40 @@ const Feedback = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!message.trim()) {
-      toast.error("Please enter your feedback");
+    // Validate input
+    const validation = feedbackSchema.safeParse({ email, message });
+    if (!validation.success) {
+      toast.error(validation.error.issues[0].message);
       return;
     }
 
     setIsSubmitting(true);
     
-    // Simulate submission - in production, this would send to your backend
-    setTimeout(() => {
+    try {
+      // Get current user if logged in
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Insert feedback into Supabase
+      const { error } = await supabase
+        .from('feedback')
+        .insert({
+          email: email || null,
+          message: message.trim(),
+          user_id: user?.id || null,
+          status: 'new'
+        });
+
+      if (error) throw error;
+
       toast.success("Thank you for your feedback! We'll review it soon.");
       setEmail("");
       setMessage("");
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      toast.error("Failed to submit feedback. Please try again.");
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -79,8 +106,12 @@ const Feedback = () => {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     rows={8}
+                    maxLength={2000}
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    {message.length}/2000 characters
+                  </p>
                 </div>
 
                 <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
