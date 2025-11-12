@@ -7,7 +7,7 @@ import { UploadSection } from "@/components/UploadSection";
 import { CandidateTable } from "@/components/CandidateTable";
 import { LoadingState } from "@/components/LoadingState";
 import { ComparisonDialog } from "@/components/ComparisonDialog";
-import { Sparkles, FileDown, Home, Users } from "lucide-react";
+import { Sparkles, FileDown, Home, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -76,8 +76,16 @@ const Dashboard = () => {
   const handleCvFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      setCvFiles(Array.from(files));
+      // Append new files to existing ones instead of replacing
+      const newFiles = Array.from(files);
+      setCvFiles(prev => [...prev, ...newFiles]);
     }
+    // Reset input value to allow selecting the same file again if needed
+    e.target.value = '';
+  };
+
+  const handleRemoveCvFile = (index: number) => {
+    setCvFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleAnalyzeBatch = async () => {
@@ -302,7 +310,7 @@ const Dashboard = () => {
             {/* Multiple CV Upload */}
             <Card className="p-6">
               <h2 className="text-2xl font-semibold text-foreground mb-2">Upload Candidate CVs</h2>
-              <p className="text-muted-foreground mb-4">Select multiple CV files to analyze</p>
+              <p className="text-muted-foreground mb-4">Select multiple CV files to analyze (you can add more files by clicking again)</p>
               
               <div className="space-y-4">
                 <input
@@ -313,19 +321,43 @@ const Dashboard = () => {
                   multiple
                   onChange={handleCvFilesChange}
                 />
-                <label htmlFor="cv-files">
-                  <Button type="button" variant="outline" asChild>
-                    <span className="cursor-pointer">Select CV Files ({cvFiles.length} selected)</span>
-                  </Button>
-                </label>
+                <div className="flex gap-2">
+                  <label htmlFor="cv-files">
+                    <Button type="button" variant="outline" asChild>
+                      <span className="cursor-pointer">
+                        {cvFiles.length === 0 ? 'Select CV Files' : `Add More CVs (${cvFiles.length} selected)`}
+                      </span>
+                    </Button>
+                  </label>
+                  {cvFiles.length > 0 && (
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      onClick={() => setCvFiles([])}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      Clear All
+                    </Button>
+                  )}
+                </div>
 
                 {cvFiles.length > 0 && (
                   <div className="mt-4 space-y-2">
                     <p className="text-sm font-medium text-foreground">Selected CVs:</p>
                     <div className="flex flex-wrap gap-2">
                       {cvFiles.map((file, idx) => (
-                        <div key={idx} className="px-3 py-1 bg-secondary/50 rounded-md text-sm text-foreground">
+                        <div 
+                          key={idx} 
+                          className="px-3 py-1 bg-secondary/50 rounded-md text-sm text-foreground flex items-center gap-2 group"
+                        >
                           {file.name}
+                          <button
+                            onClick={() => handleRemoveCvFile(idx)}
+                            className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+                            aria-label={`Remove ${file.name}`}
+                          >
+                            ×
+                          </button>
                         </div>
                       ))}
                     </div>
