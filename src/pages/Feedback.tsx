@@ -125,8 +125,8 @@ const Feedback = () => {
           <div className="mt-8 text-center text-sm text-muted-foreground">
             <p>
               You can also reach out to us directly at{" "}
-              <a href="mailto:feedback@matchai.app" className="text-primary hover:underline">
-                feedback@matchai.app
+              <a href="mailto:Moh2567@outlook.com" className="text-primary hover:underline">
+                Moh2567@outlook.com
               </a>
             </p>
           </div>
