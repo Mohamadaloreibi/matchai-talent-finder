@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LoadingState } from "@/components/LoadingState";
-import { Shield, Mail, MessageSquare, Users, CheckCircle, Clock } from "lucide-react";
+import { Shield, Mail, MessageSquare, Users, CheckCircle, Clock, Loader2 } from "lucide-react";
 
 interface FeedbackItem {
   id: string;
@@ -121,7 +120,14 @@ const Admin = () => {
   };
 
   if (isAdmin === null || loading) {
-    return <LoadingState message="Verifying admin access..." />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Verifying admin access...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
