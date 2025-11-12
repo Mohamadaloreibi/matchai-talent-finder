@@ -2,7 +2,9 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AuthButton } from "@/components/AuthButton";
 import { BetaBanner } from "@/components/BetaBanner";
-import { Sparkles, LayoutDashboard, BookMarked, Home } from "lucide-react";
+import { Sparkles, LayoutDashboard, BookMarked, Home, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface HeaderProps {
   showDashboardLink?: boolean;
@@ -15,6 +17,28 @@ export const Header = ({
   showHomeLink = false,
   showMyLettersLink = true 
 }: HeaderProps) => {
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    checkAdminStatus();
+  }, []);
+
+  const checkAdminStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase.rpc('has_role', { 
+        _user_id: user.id, 
+        _role: 'admin' 
+      });
+      
+      setIsAdmin(data === true);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    }
+  };
+
   return (
     <>
       <BetaBanner />
@@ -54,6 +78,14 @@ export const Header = ({
                 <Button variant="outline" className="gap-2">
                   <LayoutDashboard className="w-4 h-4" />
                   <span className="hidden sm:inline">Employer Dashboard</span>
+                </Button>
+              </Link>
+            )}
+            {isAdmin && (
+              <Link to="/admin">
+                <Button variant="outline" className="gap-2">
+                  <Shield className="w-4 h-4" />
+                  <span className="hidden sm:inline">Admin</span>
                 </Button>
               </Link>
             )}
