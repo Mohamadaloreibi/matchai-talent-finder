@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AuthButton } from "@/components/AuthButton";
+import { BetaBanner } from "@/components/BetaBanner";
 import { Sparkles, LayoutDashboard, BookMarked, Home } from "lucide-react";
 
 interface HeaderProps {
@@ -15,7 +16,9 @@ export const Header = ({
   showMyLettersLink = true 
 }: HeaderProps) => {
   return (
-    <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+    <>
+      <BetaBanner />
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -59,5 +62,6 @@ export const Header = ({
         </div>
       </div>
     </header>
+    </>
   );
 };

@@ -1,0 +1,116 @@
+import { useState } from "react";
+import { Header } from "@/components/Header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { MessageSquare, Send } from "lucide-react";
+
+const Feedback = () => {
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!message.trim()) {
+      toast.error("Please enter your feedback");
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    // Simulate submission - in production, this would send to your backend
+    setTimeout(() => {
+      toast.success("Thank you for your feedback! We'll review it soon.");
+      setEmail("");
+      setMessage("");
+      setIsSubmitting(false);
+    }, 1000);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+      <Header showDashboardLink={true} showHomeLink={true} showMyLettersLink={true} />
+      
+      <main className="container mx-auto px-6 py-12">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+              <MessageSquare className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-4xl font-bold text-foreground mb-2">Share Your Feedback</h1>
+            <p className="text-muted-foreground">
+              Help us improve MatchAI by sharing your thoughts, suggestions, or reporting issues.
+            </p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Feedback</CardTitle>
+              <CardDescription>
+                We value your input and read every submission. Your feedback helps us make MatchAI better for everyone.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email (optional)</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your.email@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Provide your email if you'd like us to follow up with you.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="message">Your Message *</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Tell us what you think, what features you'd like to see, or any issues you've encountered..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={8}
+                    required
+                  />
+                </div>
+
+                <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+                  <Send className="w-4 h-4" />
+                  {isSubmitting ? "Sending..." : "Send Feedback"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div className="mt-8 text-center text-sm text-muted-foreground">
+            <p>
+              You can also reach out to us directly at{" "}
+              <a href="mailto:feedback@matchai.app" className="text-primary hover:underline">
+                feedback@matchai.app
+              </a>
+            </p>
+          </div>
+        </div>
+      </main>
+
+      <footer className="border-t border-border bg-card/50 mt-20">
+        <div className="container mx-auto px-6 py-8">
+          <p className="text-center text-muted-foreground">
+            Built with ❤️ by <span className="font-semibold text-foreground">Mohamed</span>
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default Feedback;
