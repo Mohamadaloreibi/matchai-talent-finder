@@ -67,7 +67,7 @@ const Index = () => {
       if (session?.user) {
         // Check if user has used their daily analysis
         const { data, error } = await supabase
-          .from('analysis_logs')
+          .from('analysis_logs' as any)
           .select('created_at')
           .eq('user_id', session.user.id)
           .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
