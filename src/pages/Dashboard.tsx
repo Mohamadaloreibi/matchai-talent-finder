@@ -50,7 +50,86 @@ const Dashboard = () => {
   const [savedDashboards, setSavedDashboards] = useState<DashboardData[]>([]);
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   const [showComparison, setShowComparison] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [hasUsedDailyAnalysis, setHasUsedDailyAnalysis] = useState(false);
+  const [isCheckingQuota, setIsCheckingQuota] = useState(true);
   const { toast } = useToast();
+
+  // Check auth status and daily quota
+  useEffect(() => {
+    const checkAuthAndQuota = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user || null);
+
+        if (session?.user) {
+          console.log('Checking quota for user:', session.user.id);
+          const { data, error } = await supabase
+            .from('analysis_logs' as any)
+            .select('created_at')
+            .eq('user_id', session.user.id)
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error checking analysis quota:', error);
+            setHasUsedDailyAnalysis(false);
+          } else if (data && 'created_at' in data) {
+            console.log('User has used daily analysis at:', (data as any).created_at);
+            setHasUsedDailyAnalysis(true);
+          } else {
+            console.log('User has not used daily analysis yet');
+            setHasUsedDailyAnalysis(false);
+          }
+        } else {
+          console.log('No user session found');
+          setHasUsedDailyAnalysis(false);
+        }
+      } catch (err) {
+        console.error('Error in checkAuthAndQuota:', err);
+        setHasUsedDailyAnalysis(false);
+      } finally {
+        setIsCheckingQuota(false);
+      }
+    };
+
+    checkAuthAndQuota();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setUser(session?.user || null);
+      if (!session?.user) {
+        setHasUsedDailyAnalysis(false);
+        setIsCheckingQuota(false);
+      } else {
+        setIsCheckingQuota(true);
+        try {
+          const { data, error } = await supabase
+            .from('analysis_logs' as any)
+            .select('created_at')
+            .eq('user_id', session.user.id)
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (!error && data) {
+            setHasUsedDailyAnalysis(true);
+          } else {
+            setHasUsedDailyAnalysis(false);
+          }
+        } catch (err) {
+          console.error('Error checking quota on auth change:', err);
+          setHasUsedDailyAnalysis(false);
+        } finally {
+          setIsCheckingQuota(false);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Load saved dashboards from localStorage
   useEffect(() => {
@@ -89,6 +168,26 @@ const Dashboard = () => {
   };
 
   const handleAnalyzeBatch = async () => {
+    // Check if user is logged in
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to use the analysis feature.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if user has already used their daily analysis
+    if (hasUsedDailyAnalysis) {
+      toast({
+        title: "Daily limit reached",
+        description: "You can only run one analysis every 24 hours. Please try again tomorrow.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const jobContent = jobText || (jobFile ? await readFileAsText(jobFile) : "");
 
     if (!jobContent) {
@@ -128,6 +227,18 @@ const Dashboard = () => {
         });
 
         if (error) {
+          // Handle rate limit error
+          if (error.message?.includes('daily_limit_reached') || data?.error === 'daily_limit_reached') {
+            setHasUsedDailyAnalysis(true);
+            toast({
+              title: "Daily limit reached",
+              description: "You can only run one analysis every 24 hours. Please try again tomorrow.",
+              variant: "destructive",
+            });
+            setIsAnalyzing(false);
+            return;
+          }
+          
           console.error(`Error analyzing ${cvFile.name}:`, error);
           continue;
         }
@@ -350,11 +461,27 @@ const Dashboard = () => {
             </Card>
 
             {/* Analyze Button */}
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-3">
+              {!isCheckingQuota && user && (
+                <div className={`px-4 py-2 rounded-md ${hasUsedDailyAnalysis ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                  <p className="text-sm font-medium text-center">
+                    {hasUsedDailyAnalysis 
+                      ? "You've used today's free analysis. Try again in 24 hours." 
+                      : "You have 1 free analysis available today."}
+                  </p>
+                </div>
+              )}
+              {!isCheckingQuota && !user && (
+                <div className="px-4 py-2 rounded-md bg-muted">
+                  <p className="text-sm font-medium text-muted-foreground text-center">
+                    Please log in to use the analysis feature.
+                  </p>
+                </div>
+              )}
               <Button
                 size="lg"
                 onClick={handleAnalyzeBatch}
-                disabled={!jobText && !jobFile || cvFiles.length === 0 || isAnalyzing}
+                disabled={!jobText && !jobFile || cvFiles.length === 0 || isAnalyzing || hasUsedDailyAnalysis || !user || isCheckingQuota}
                 className="gap-2 px-8 py-6 text-lg"
               >
                 {isAnalyzing ? (

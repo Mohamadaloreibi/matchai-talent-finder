@@ -69,7 +69,7 @@ const Index = () => {
           console.log('Checking quota for user:', session.user.id);
           // Check if user has used their daily analysis
           const { data, error } = await supabase
-            .from('analysis_logs')
+            .from('analysis_logs' as any)
             .select('created_at')
             .eq('user_id', session.user.id)
             .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -80,8 +80,8 @@ const Index = () => {
           if (error) {
             console.error('Error checking analysis quota:', error);
             setHasUsedDailyAnalysis(false);
-          } else if (data) {
-            console.log('User has used daily analysis at:', data.created_at);
+          } else if (data && 'created_at' in data) {
+            console.log('User has used daily analysis at:', (data as any).created_at);
             setHasUsedDailyAnalysis(true);
           } else {
             console.log('User has not used daily analysis yet');
@@ -112,7 +112,7 @@ const Index = () => {
         setIsCheckingQuota(true);
         try {
           const { data, error } = await supabase
-            .from('analysis_logs')
+            .from('analysis_logs' as any)
             .select('created_at')
             .eq('user_id', session.user.id)
             .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
