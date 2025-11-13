@@ -13,13 +13,6 @@ MatchAI är ett AI-drivet verktyg som hjälper jobbsökare och företag att:
 - 🧠 “Explain Letter” – AI förklarar varför brevet ser ut som det gör  
 - 📊 Employer Dashboard (beta) – översikt över kandidater och matchpoäng  
 
-## Tech Stack
-
-- Frontend: React / Next.js (genererat, vidareutvecklat för hand)
-- UI: Tailwind CSS + shadcn/ui
-- Backend: Vercel API routes / Supabase functions
-- Auth: Supabase Auth (e-post + Google)
-- AI: OpenAI API
 
 ## Getting Started
 
