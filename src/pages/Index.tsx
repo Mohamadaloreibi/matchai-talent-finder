@@ -61,36 +61,76 @@ const Index = () => {
   // Check auth status and daily quota
   useEffect(() => {
     const checkAuthAndQuota = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user || null);
 
-      if (session?.user) {
-        // Check if user has used their daily analysis
-        const { data, error } = await supabase
-          .from('analysis_logs' as any)
-          .select('created_at')
-          .eq('user_id', session.user.id)
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        if (session?.user) {
+          console.log('Checking quota for user:', session.user.id);
+          // Check if user has used their daily analysis
+          const { data, error } = await supabase
+            .from('analysis_logs')
+            .select('created_at')
+            .eq('user_id', session.user.id)
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        if (!error && data) {
-          setHasUsedDailyAnalysis(true);
+          if (error) {
+            console.error('Error checking analysis quota:', error);
+            setHasUsedDailyAnalysis(false);
+          } else if (data) {
+            console.log('User has used daily analysis at:', data.created_at);
+            setHasUsedDailyAnalysis(true);
+          } else {
+            console.log('User has not used daily analysis yet');
+            setHasUsedDailyAnalysis(false);
+          }
         } else {
+          console.log('No user session found');
           setHasUsedDailyAnalysis(false);
         }
+      } catch (err) {
+        console.error('Error in checkAuthAndQuota:', err);
+        setHasUsedDailyAnalysis(false);
+      } finally {
+        setIsCheckingQuota(false);
       }
-      setIsCheckingQuota(false);
     };
 
     checkAuthAndQuota();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user || null);
       if (!session?.user) {
         setHasUsedDailyAnalysis(false);
+        setIsCheckingQuota(false);
+      } else {
+        // Re-check quota when auth state changes
+        setIsCheckingQuota(true);
+        try {
+          const { data, error } = await supabase
+            .from('analysis_logs')
+            .select('created_at')
+            .eq('user_id', session.user.id)
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (!error && data) {
+            setHasUsedDailyAnalysis(true);
+          } else {
+            setHasUsedDailyAnalysis(false);
+          }
+        } catch (err) {
+          console.error('Error checking quota on auth change:', err);
+          setHasUsedDailyAnalysis(false);
+        } finally {
+          setIsCheckingQuota(false);
+        }
       }
     });
 
@@ -281,16 +321,20 @@ const Index = () => {
             {/* Analyze Button */}
             <div className="flex flex-col items-center gap-3">
               {!isCheckingQuota && user && (
-                <p className="text-sm text-muted-foreground">
-                  {hasUsedDailyAnalysis 
-                    ? "You've used today's free analysis. Try again in 24 hours." 
-                    : "You have 1 free analysis available today."}
-                </p>
+                <div className={`px-4 py-2 rounded-md ${hasUsedDailyAnalysis ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                  <p className="text-sm font-medium text-center">
+                    {hasUsedDailyAnalysis 
+                      ? "You've used today's free analysis. Try again in 24 hours." 
+                      : "You have 1 free analysis available today."}
+                  </p>
+                </div>
               )}
               {!isCheckingQuota && !user && (
-                <p className="text-sm text-muted-foreground">
-                  Please log in to use the analysis feature.
-                </p>
+                <div className="px-4 py-2 rounded-md bg-muted">
+                  <p className="text-sm font-medium text-muted-foreground text-center">
+                    Please log in to use the analysis feature.
+                  </p>
+                </div>
               )}
               <Button
                 size="lg"
