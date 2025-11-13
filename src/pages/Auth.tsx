@@ -66,13 +66,18 @@ const Auth = () => {
         
         if (error) throw error;
 
-        // Check if email confirmation is required
-        if (data?.user && !data.session) {
-          setShowVerificationMessage(true);
-          toast.success("Check your email for the verification link!");
-        } else if (data?.session) {
-          toast.success("Account created and signed in!");
-          navigate("/");
+        // Always show verification message for signups (handles both new users and repeated signups)
+        // If user already exists but isn't verified, Supabase won't create a session
+        if (data?.user) {
+          if (!data.session) {
+            // User needs to verify email
+            setShowVerificationMessage(true);
+            toast.success("Check your email for the verification link!");
+          } else {
+            // Auto-confirm is enabled, user is signed in immediately
+            toast.success("Account created and signed in!");
+            navigate("/");
+          }
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
