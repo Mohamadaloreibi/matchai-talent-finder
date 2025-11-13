@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { UploadSection } from "@/components/UploadSection";
@@ -9,6 +9,7 @@ import { LoadingState } from "@/components/LoadingState";
 import { ComparisonDialog } from "@/components/ComparisonDialog";
 import { Header } from "@/components/Header";
 import { Sparkles, FileDown, Users, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -54,13 +55,26 @@ const Dashboard = () => {
   const [hasUsedDailyAnalysis, setHasUsedDailyAnalysis] = useState(false);
   const [isCheckingQuota, setIsCheckingQuota] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  // Check auth status and daily quota
+  // Check auth status and daily quota, redirect if not logged in
   useEffect(() => {
     const checkAuthAndQuota = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user || null);
+        
+        // Redirect to auth if not logged in
+        if (!session?.user) {
+          toast({
+            title: "Sign in required",
+            description: "Please sign in to access the Employer Dashboard.",
+            variant: "destructive",
+          });
+          navigate("/auth");
+          return;
+        }
+        
+        setUser(session.user);
 
         if (session?.user) {
           console.log('Checking quota for user:', session.user.id);
@@ -98,33 +112,34 @@ const Dashboard = () => {
     checkAuthAndQuota();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user || null);
       if (!session?.user) {
-        setHasUsedDailyAnalysis(false);
-        setIsCheckingQuota(false);
-      } else {
-        setIsCheckingQuota(true);
-        try {
-          const { data, error } = await supabase
-            .from('analysis_logs' as any)
-            .select('created_at')
-            .eq('user_id', session.user.id)
-            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+        navigate("/auth");
+        return;
+      }
+      
+      setUser(session.user);
+      setIsCheckingQuota(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('analysis_logs' as any)
+          .select('created_at')
+          .eq('user_id', session.user.id)
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-          if (!error && data) {
-            setHasUsedDailyAnalysis(true);
-          } else {
-            setHasUsedDailyAnalysis(false);
-          }
-        } catch (err) {
-          console.error('Error checking quota on auth change:', err);
+        if (!error && data) {
+          setHasUsedDailyAnalysis(true);
+        } else {
           setHasUsedDailyAnalysis(false);
-        } finally {
-          setIsCheckingQuota(false);
         }
+      } catch (err) {
+        console.error('Error checking quota on auth change:', err);
+        setHasUsedDailyAnalysis(false);
+      } finally {
+        setIsCheckingQuota(false);
       }
     });
 
@@ -171,10 +186,11 @@ const Dashboard = () => {
     // Check if user is logged in
     if (!user) {
       toast({
-        title: "Login Required",
-        description: "Please log in to use the analysis feature.",
+        title: "Sign in required",
+        description: "Create a free account or sign in to run your daily analysis.",
         variant: "destructive",
       });
+      navigate("/auth");
       return;
     }
 
@@ -391,6 +407,15 @@ const Dashboard = () => {
       <main className="container mx-auto px-6 py-12">
         {!currentDashboard ? (
           <div className="max-w-6xl mx-auto space-y-8">
+            {/* Beta info banner */}
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="py-4">
+                <p className="text-sm text-center text-muted-foreground">
+                  <span className="font-semibold text-foreground">MatchAI is in Beta.</span> Each user can run <span className="font-semibold text-primary">1 free analysis per day</span>. Sign in to use your daily analysis.
+                </p>
+              </CardContent>
+            </Card>
+
             {/* Job Description Upload */}
             <UploadSection
               title="Upload Job Description"
@@ -461,23 +486,25 @@ const Dashboard = () => {
             </Card>
 
             {/* Analyze Button */}
-            <div className="flex flex-col items-center gap-3">
-              {!isCheckingQuota && user && (
-                <div className={`px-4 py-2 rounded-md ${hasUsedDailyAnalysis ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
-                  <p className="text-sm font-medium text-center">
-                    {hasUsedDailyAnalysis 
-                      ? "You've used today's free analysis. Try again in 24 hours." 
-                      : "You have 1 free analysis available today."}
-                  </p>
-                </div>
-              )}
-              {!isCheckingQuota && !user && (
-                <div className="px-4 py-2 rounded-md bg-muted">
-                  <p className="text-sm font-medium text-muted-foreground text-center">
-                    Please log in to use the analysis feature.
-                  </p>
-                </div>
-              )}
+            <div className="flex flex-col items-center gap-4">
+              {/* Daily limit status */}
+              <div className="w-full max-w-2xl">
+                {!isCheckingQuota && user && !hasUsedDailyAnalysis && (
+                  <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
+                    <p className="text-sm font-medium text-center text-foreground">
+                      ✨ You have <span className="font-bold text-primary">1 free analysis</span> available today during the beta.
+                    </p>
+                  </div>
+                )}
+                {!isCheckingQuota && user && hasUsedDailyAnalysis && (
+                  <div className="px-6 py-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm font-medium text-center text-destructive">
+                      You've used today's free analysis. Try again in 24 hours.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <Button
                 size="lg"
                 onClick={handleAnalyzeBatch}
