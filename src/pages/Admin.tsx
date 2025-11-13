@@ -16,6 +16,7 @@ interface FeedbackItem {
   status: string;
   created_at: string;
   user_id: string | null;
+  user_email?: string; // Retrieved from auth.users for authenticated users
 }
 
 interface UserRole {
@@ -82,7 +83,22 @@ const Admin = () => {
         .order('created_at', { ascending: false });
 
       if (feedbackError) throw feedbackError;
-      setFeedback(feedbackData || []);
+      
+      // For authenticated users, fetch email from auth.users
+      const feedbackWithEmails = await Promise.all(
+        (feedbackData || []).map(async (item) => {
+          if (item.user_id) {
+            // Fetch email from auth admin API
+            const { data: { user }, error } = await supabase.auth.admin.getUserById(item.user_id);
+            if (!error && user) {
+              return { ...item, user_email: user.email };
+            }
+          }
+          return item;
+        })
+      );
+      
+      setFeedback(feedbackWithEmails);
 
       // Load user roles
       const { data: rolesData, error: rolesError } = await supabase
@@ -225,7 +241,7 @@ const Admin = () => {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Mail className="w-4 h-4 text-muted-foreground" />
-                            {item.email || <span className="text-muted-foreground italic">Anonymous</span>}
+                            {item.user_email || item.email || <span className="text-muted-foreground italic">Anonymous</span>}
                           </div>
                         </TableCell>
                         <TableCell className="max-w-md">

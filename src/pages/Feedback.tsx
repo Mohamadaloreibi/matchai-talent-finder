@@ -37,10 +37,12 @@ const Feedback = () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       // Insert feedback into Supabase
+      // Authenticated users: don't store email (retrieve from auth.users)
+      // Anonymous users: must provide email
       const { error } = await supabase
         .from('feedback')
         .insert({
-          email: email || null,
+          email: user ? null : (email || null), // Only store email for anonymous users
           message: message.trim(),
           user_id: user?.id || null,
           status: 'new'
