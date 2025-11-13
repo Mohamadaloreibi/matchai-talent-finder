@@ -31,19 +31,20 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
+    // Check if this is a password recovery callback first
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get('type');
+    if (type === 'recovery') {
+      setIsResettingPassword(true);
+      return; // Don't redirect if this is a password recovery
+    }
+
+    // Check if user is already logged in (only redirect if not doing password recovery)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate("/");
       }
     });
-
-    // Check if this is a password recovery callback
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const type = hashParams.get('type');
-    if (type === 'recovery') {
-      setIsResettingPassword(true);
-    }
   }, [navigate]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
