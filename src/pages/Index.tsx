@@ -53,7 +53,49 @@ const Index = () => {
   const [analyzedCvText, setAnalyzedCvText] = useState("");
   const [analyzedJobText, setAnalyzedJobText] = useState("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [hasUsedDailyAnalysis, setHasUsedDailyAnalysis] = useState(false);
+  const [isCheckingQuota, setIsCheckingQuota] = useState(true);
   const { toast } = useToast();
+
+  // Check auth status and daily quota
+  useEffect(() => {
+    const checkAuthAndQuota = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user || null);
+
+      if (session?.user) {
+        // Check if user has used their daily analysis
+        const { data, error } = await supabase
+          .from('analysis_logs')
+          .select('created_at')
+          .eq('user_id', session.user.id)
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data) {
+          setHasUsedDailyAnalysis(true);
+        } else {
+          setHasUsedDailyAnalysis(false);
+        }
+      }
+      setIsCheckingQuota(false);
+    };
+
+    checkAuthAndQuota();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+      if (!session?.user) {
+        setHasUsedDailyAnalysis(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Load history from localStorage
   useEffect(() => {
@@ -91,6 +133,26 @@ const Index = () => {
   };
 
   const handleAnalyze = async () => {
+    // Check if user is logged in
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to use the analysis feature.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if user has already used their daily analysis
+    if (hasUsedDailyAnalysis) {
+      toast({
+        title: "Daily limit reached",
+        description: "You can only run one analysis every 24 hours. Please try again tomorrow.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate inputs
     const cvContent = cvText || (cvFile ? await readFileAsText(cvFile) : "");
     const jobContent = jobText || (jobFile ? await readFileAsText(jobFile) : "");
@@ -118,12 +180,38 @@ const Index = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle rate limit error
+        if (error.message?.includes('daily_limit_reached') || data?.error === 'daily_limit_reached') {
+          setHasUsedDailyAnalysis(true);
+          toast({
+            title: "Daily limit reached",
+            description: "You can only run one analysis every 24 hours. Please try again tomorrow.",
+            variant: "destructive",
+          });
+          setIsAnalyzing(false);
+          return;
+        }
+        
+        // Handle authentication error
+        if (error.message?.includes('authentication_required') || data?.error === 'authentication_required') {
+          toast({
+            title: "Login Required",
+            description: "Please log in to use the analysis feature.",
+            variant: "destructive",
+          });
+          setIsAnalyzing(false);
+          return;
+        }
+        
+        throw error;
+      }
 
       setMatchResult(data);
       setAnalyzedCvText(cvContent);
       setAnalyzedJobText(jobContent);
       saveToHistory(data);
+      setHasUsedDailyAnalysis(true); // Mark as used after successful analysis
       
       toast({
         title: "Analysis Complete!",
@@ -191,11 +279,23 @@ const Index = () => {
             </div>
 
             {/* Analyze Button */}
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-3">
+              {!isCheckingQuota && user && (
+                <p className="text-sm text-muted-foreground">
+                  {hasUsedDailyAnalysis 
+                    ? "You've used today's free analysis. Try again in 24 hours." 
+                    : "You have 1 free analysis available today."}
+                </p>
+              )}
+              {!isCheckingQuota && !user && (
+                <p className="text-sm text-muted-foreground">
+                  Please log in to use the analysis feature.
+                </p>
+              )}
               <Button
                 size="lg"
                 onClick={handleAnalyze}
-                disabled={!canAnalyze || isAnalyzing}
+                disabled={!canAnalyze || isAnalyzing || hasUsedDailyAnalysis || !user || isCheckingQuota}
                 className="gap-2 px-8 py-6 text-lg"
               >
                 {isAnalyzing ? (

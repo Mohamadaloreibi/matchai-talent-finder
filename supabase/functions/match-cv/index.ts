@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,8 +13,77 @@ serve(async (req) => {
   }
 
   try {
+    // Get authorization header
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'authentication_required',
+          message: 'Please log in to use the analysis feature.' 
+        }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get user from JWT
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !user) {
+      console.error('Auth error:', userError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'authentication_required',
+          message: 'Please log in to use the analysis feature.' 
+        }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log('User authenticated:', user.id);
+
+    // Check if user has already run an analysis in the last 24 hours
+    const { data: recentAnalysis, error: checkError } = await supabase
+      .from('analysis_logs')
+      .select('created_at')
+      .eq('user_id', user.id)
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking analysis logs:', checkError);
+    }
+
+    if (recentAnalysis) {
+      console.log('User has already used their daily analysis');
+      return new Response(
+        JSON.stringify({ 
+          error: 'daily_limit_reached',
+          message: 'You can only run one analysis every 24 hours. Try again tomorrow.',
+          last_analysis_at: recentAnalysis.created_at
+        }),
+        { 
+          status: 429, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const { cvText, jobDescription, candidateName, jobTitle, company, language = 'en' } = await req.json();
-    console.log('Received match request');
+    console.log('Received match request for user:', user.id);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -203,6 +273,18 @@ Please analyze this match comprehensively and provide results in the specified J
       created_at_iso: new Date().toISOString(),
       language: language
     };
+
+    // Log the analysis
+    const { error: logError } = await supabase
+      .from('analysis_logs')
+      .insert({ user_id: user.id });
+
+    if (logError) {
+      console.error('Error logging analysis:', logError);
+      // Don't fail the request if logging fails
+    } else {
+      console.log('Analysis logged successfully for user:', user.id);
+    }
 
     return new Response(
       JSON.stringify(enrichedResult),
