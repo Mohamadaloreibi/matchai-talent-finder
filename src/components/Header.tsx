@@ -51,7 +51,7 @@ export const Header = ({
             </div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-foreground">MatchAI</h1>
-              <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-700 border border-amber-500/30">
+              <span className="text-xs font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
                 Beta
               </span>
             </div>

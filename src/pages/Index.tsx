@@ -176,8 +176,8 @@ const Index = () => {
     // Check if user is logged in
     if (!user) {
       toast({
-        title: "Login Required",
-        description: "Please log in to use the analysis feature.",
+        title: "Sign in required",
+        description: "Create a free account or sign in to run your daily analysis.",
         variant: "destructive",
       });
       return;
@@ -319,23 +319,32 @@ const Index = () => {
             </div>
 
             {/* Analyze Button */}
-            <div className="flex flex-col items-center gap-3">
-              {!isCheckingQuota && user && (
-                <div className={`px-4 py-2 rounded-md ${hasUsedDailyAnalysis ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
-                  <p className="text-sm font-medium text-center">
-                    {hasUsedDailyAnalysis 
-                      ? "You've used today's free analysis. Try again in 24 hours." 
-                      : "You have 1 free analysis available today."}
-                  </p>
-                </div>
-              )}
-              {!isCheckingQuota && !user && (
-                <div className="px-4 py-2 rounded-md bg-muted">
-                  <p className="text-sm font-medium text-muted-foreground text-center">
-                    Please log in to use the analysis feature.
-                  </p>
-                </div>
-              )}
+            <div className="flex flex-col items-center gap-4">
+              {/* Beta status and daily limit info */}
+              <div className="w-full max-w-2xl">
+                {!isCheckingQuota && user && !hasUsedDailyAnalysis && (
+                  <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
+                    <p className="text-sm font-medium text-center text-foreground">
+                      ✨ You have <span className="font-bold text-primary">1 free analysis</span> available today during the beta.
+                    </p>
+                  </div>
+                )}
+                {!isCheckingQuota && user && hasUsedDailyAnalysis && (
+                  <div className="px-6 py-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm font-medium text-center text-destructive">
+                      You've used today's free analysis. Try again in 24 hours.
+                    </p>
+                  </div>
+                )}
+                {!isCheckingQuota && !user && (
+                  <div className="px-6 py-4 rounded-lg bg-muted border border-border">
+                    <p className="text-sm font-medium text-center text-muted-foreground">
+                      Sign in to use your <span className="font-semibold">1 free analysis per day</span> during the beta.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <Button
                 size="lg"
                 onClick={handleAnalyze}
