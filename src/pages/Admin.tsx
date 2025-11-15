@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Shield, Mail, MessageSquare, Users, CheckCircle, Clock, Loader2 } from "lucide-react";
+import { Shield, Mail, MessageSquare, Users, CheckCircle, Clock, Loader2, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface FeedbackItem {
   id: string;
@@ -244,8 +245,41 @@ const Admin = () => {
                             {item.user_email || item.email || <span className="text-muted-foreground italic">Anonymous</span>}
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-md">
-                          <p className="line-clamp-2">{item.message}</p>
+                        <TableCell className="min-w-[300px] max-w-[600px]">
+                          <div className="space-y-2">
+                            <p className="whitespace-normal break-words text-sm leading-relaxed">
+                              {item.message.length > 200 
+                                ? `${item.message.slice(0, 200)}...` 
+                                : item.message}
+                            </p>
+                            {item.message.length > 200 && (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-7 text-xs gap-1"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    View Full Message
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                                  <DialogHeader>
+                                    <DialogTitle>Full Feedback Message</DialogTitle>
+                                    <DialogDescription>
+                                      From: {item.user_email || item.email || 'Anonymous'} • {new Date(item.created_at).toLocaleString()}
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="mt-4">
+                                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                                      {item.message}
+                                    </p>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge 
