@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles } from "lucide-react";
 import { Header } from "@/components/Header";
+import { BetaRoadmap } from "@/components/BetaRoadmap";
 
 interface MatchResultData {
   score: number;
@@ -403,6 +404,11 @@ const Index = () => {
             />
           </div>
         )}
+
+        {/* Beta Roadmap Section */}
+        <div className="mt-16">
+          <BetaRoadmap />
+        </div>
       </main>
 
       {/* Footer */}
