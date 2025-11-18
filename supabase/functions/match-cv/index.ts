@@ -51,29 +51,39 @@ serve(async (req) => {
       );
     }
 
-    console.log('User authenticated:', user.id);
+    console.log('✓ User authenticated successfully. User ID:', user.id);
 
     // Check if user has already run an analysis in the last 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    console.log('Checking for analysis logs since:', twentyFourHoursAgo.toISOString());
+    
     const { data: recentAnalysis, error: checkError } = await supabase
       .from('analysis_logs')
       .select('created_at')
       .eq('user_id', user.id)
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .gte('created_at', twentyFourHoursAgo.toISOString())
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (checkError) {
-      console.error('Error checking analysis logs:', checkError);
+      console.error('❌ Error checking analysis logs:', checkError);
+      // Continue with analysis if we can't check logs (fail open)
     }
 
     if (recentAnalysis) {
-      console.log('User has already used their daily analysis');
+      const lastAnalysisTime = new Date(recentAnalysis.created_at);
+      const hoursUntilReset = Math.ceil((lastAnalysisTime.getTime() + 24 * 60 * 60 * 1000 - Date.now()) / (60 * 60 * 1000));
+      
+      console.log('❌ Daily limit reached. Last analysis:', recentAnalysis.created_at);
+      console.log('⏰ Hours until reset:', hoursUntilReset);
+      
       return new Response(
         JSON.stringify({ 
           error: 'daily_limit_reached',
           message: 'You can only run one analysis every 24 hours. Try again tomorrow.',
-          last_analysis_at: recentAnalysis.created_at
+          last_analysis_at: recentAnalysis.created_at,
+          hours_until_reset: hoursUntilReset
         }),
         { 
           status: 429, 
@@ -81,9 +91,13 @@ serve(async (req) => {
         }
       );
     }
+    
+    console.log('✓ No recent analysis found. User has quota available.');
+
+    console.log('✓ No recent analysis found. User has quota available.');
 
     const { cvText, jobDescription, candidateName, jobTitle, company, language = 'en' } = await req.json();
-    console.log('Received match request for user:', user.id);
+    console.log('📋 Starting analysis for user:', user.id, '| Candidate:', candidateName || 'Unknown', '| Language:', language);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -274,16 +288,20 @@ Please analyze this match comprehensively and provide results in the specified J
       language: language
     };
 
-    // Log the analysis
-    const { error: logError } = await supabase
+    // Log the analysis to track daily limit
+    console.log('📝 Inserting analysis log for user:', user.id);
+    const { data: logData, error: logError } = await supabase
       .from('analysis_logs')
-      .insert({ user_id: user.id });
+      .insert({ user_id: user.id })
+      .select()
+      .single();
 
     if (logError) {
-      console.error('Error logging analysis:', logError);
+      console.error('❌ Error logging analysis:', logError);
       // Don't fail the request if logging fails
     } else {
-      console.log('Analysis logged successfully for user:', user.id);
+      console.log('✓ Analysis logged successfully. Log ID:', logData?.id, '| Created at:', logData?.created_at);
+      console.log('⏰ User quota will reset 24 hours from now at:', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString());
     }
 
     return new Response(
