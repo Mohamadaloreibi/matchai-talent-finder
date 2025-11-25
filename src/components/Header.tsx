@@ -2,9 +2,11 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AuthButton } from "@/components/AuthButton";
 import { BetaBanner } from "@/components/BetaBanner";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { Sparkles, LayoutDashboard, BookMarked, Home, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface HeaderProps {
   showDashboardLink?: boolean;
@@ -18,6 +20,7 @@ export const Header = ({
   showMyLettersLink = true 
 }: HeaderProps) => {
   const [isAdmin, setIsAdmin] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     checkAdminStatus();
@@ -57,11 +60,12 @@ export const Header = ({
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <LanguageSelector />
             {showHomeLink && (
               <Link to="/">
                 <Button variant="outline" className="gap-2">
                   <Home className="w-4 h-4" />
-                  <span className="hidden sm:inline">Home</span>
+                  <span className="hidden sm:inline">{t('header.home')}</span>
                 </Button>
               </Link>
             )}
@@ -69,7 +73,7 @@ export const Header = ({
               <Link to="/my-letters">
                 <Button variant="outline" className="gap-2">
                   <BookMarked className="w-4 h-4" />
-                  <span className="hidden sm:inline">My Letters</span>
+                  <span className="hidden sm:inline">{t('header.myLetters')}</span>
                 </Button>
               </Link>
             )}
@@ -77,7 +81,7 @@ export const Header = ({
               <Link to="/dashboard">
                 <Button variant="outline" className="gap-2">
                   <LayoutDashboard className="w-4 h-4" />
-                  <span className="hidden sm:inline">Employer Dashboard</span>
+                  <span className="hidden sm:inline">{t('header.dashboard')}</span>
                 </Button>
               </Link>
             )}
@@ -85,7 +89,7 @@ export const Header = ({
               <Link to="/admin">
                 <Button variant="outline" className="gap-2">
                   <Shield className="w-4 h-4" />
-                  <span className="hidden sm:inline">Admin</span>
+                  <span className="hidden sm:inline">{t('header.admin')}</span>
                 </Button>
               </Link>
             )}

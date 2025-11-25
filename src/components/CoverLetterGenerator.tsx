@@ -9,6 +9,7 @@ import { User } from "@supabase/supabase-js";
 import { Mail, Copy, FileDown, RefreshCw } from "lucide-react";
 import { generateCoverLetterPDF } from "@/lib/coverLetterPdfGenerator";
 import { toast as sonnerToast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CoverLetterGeneratorProps {
   candidateName: string;
@@ -29,7 +30,7 @@ export const CoverLetterGenerator = ({
   matchSummary,
   matchingSkills,
 }: CoverLetterGeneratorProps) => {
-  const [language, setLanguage] = useState<string>("auto");
+  const { language: globalLanguage, t } = useLanguage();
   const [tone, setTone] = useState<string>("professional");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedLetter, setGeneratedLetter] = useState<string>("");
@@ -62,12 +63,11 @@ export const CoverLetterGenerator = ({
     if (savedLetter) {
       try {
         const parsed = JSON.parse(savedLetter);
-        // Simple hash check - could be improved
+        // Simple hash check
         const currentHash = hashString(cvText + jobDescription);
         if (parsed.hash === currentHash) {
           setGeneratedLetter(parsed.letter);
           setDetectedLanguage(parsed.language || "en");
-          setLanguage(parsed.languagePref || "auto");
           setTone(parsed.tone || "professional");
         }
       } catch (error) {
@@ -87,7 +87,7 @@ export const CoverLetterGenerator = ({
           job_description: jobDescription,
           match_summary: matchSummary,
           matching_skills: matchingSkills,
-          language_pref: language,
+          language_pref: globalLanguage, // Use global language from context
           tone: tone,
           job_title: jobTitle,
           company: company,
@@ -111,7 +111,6 @@ export const CoverLetterGenerator = ({
         JSON.stringify({
           letter: letterText,
           language: lang,
-          languagePref: language,
           tone: tone,
           hash: currentHash,
         })
@@ -136,24 +135,33 @@ export const CoverLetterGenerator = ({
           if (saveError) throw saveError;
 
           toast({
-            title: "Cover Letter Generated & Saved!",
-            description: "Your personalized cover letter is ready and saved.",
+            title: globalLanguage === 'sv' ? "Personligt brev genererat & sparat!" : "Cover Letter Generated & Saved!",
+            description: globalLanguage === 'sv' 
+              ? "Ditt personliga brev är redo och sparat."
+              : "Your personalized cover letter is ready and saved.",
           });
         } catch (saveError) {
           console.error("Failed to save letter:", saveError);
           toast({
-            title: "Cover Letter Generated!",
-            description: "Letter created but couldn't be saved to your account.",
+            title: t('coverletter.generate'),
+            description: globalLanguage === 'sv'
+              ? "Brevet skapat men kunde inte sparas till ditt konto."
+              : "Letter created but couldn't be saved to your account.",
           });
         }
       } else {
         toast({
-          title: "Cover Letter Generated!",
-          description: "Your personalized cover letter is ready.",
+          title: t('coverletter.generate'),
+          description: globalLanguage === 'sv' 
+            ? "Ditt personliga brev är redo."
+            : "Your personalized cover letter is ready.",
         });
-        sonnerToast.info("Sign in to save your letters permanently", {
-          duration: 5000,
-        });
+        sonnerToast.info(
+          globalLanguage === 'sv'
+            ? "Logga in för att spara dina brev permanent"
+            : "Sign in to save your letters permanently",
+          { duration: 5000 }
+        );
       }
     } catch (error: any) {
       console.error("Error generating cover letter:", error);
@@ -270,40 +278,26 @@ export const CoverLetterGenerator = ({
   return (
     <Card className="p-6 space-y-6">
       <div className="space-y-2">
-        <h3 className="text-xl font-semibold text-foreground">AI-Generated Cover Letter</h3>
+        <h3 className="text-xl font-semibold text-foreground">{t('coverletter.title')}</h3>
         <p className="text-sm text-muted-foreground">
-          Generate a personalized cover letter based on your CV and the job description.
+          {globalLanguage === 'sv' 
+            ? "Generera ett personligt brev baserat på ditt CV och jobbeskrivningen."
+            : "Generate a personalized cover letter based on your CV and the job description."}
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Language Selector */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Language</label>
-          <Select value={language} onValueChange={setLanguage}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select language" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="auto">Auto (detect)</SelectItem>
-              <SelectItem value="sv">Svenska</SelectItem>
-              <SelectItem value="en">English</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Tone Selector */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Tone</label>
+          <label className="text-sm font-medium text-foreground">{t('coverletter.tone')}</label>
           <Select value={tone} onValueChange={setTone}>
             <SelectTrigger>
-              <SelectValue placeholder="Select tone" />
+              <SelectValue placeholder={globalLanguage === 'sv' ? "Välj ton" : "Select tone"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="professional">Professional</SelectItem>
-              <SelectItem value="friendly">Friendly</SelectItem>
-              <SelectItem value="concise">Concise</SelectItem>
-              <SelectItem value="story">Story-driven</SelectItem>
+              <SelectItem value="professional">{t('coverletter.tone.professional')}</SelectItem>
+              <SelectItem value="friendly">{t('coverletter.tone.enthusiastic')}</SelectItem>
+              <SelectItem value="concise">{t('coverletter.tone.confident')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -319,12 +313,12 @@ export const CoverLetterGenerator = ({
         {isGenerating ? (
           <>
             <RefreshCw className="w-5 h-5 animate-spin" />
-            Writing your letter...
+            {t('coverletter.generating')}
           </>
         ) : (
           <>
             <Mail className="w-5 h-5" />
-            Generate Cover Letter
+            {t('coverletter.generate')}
           </>
         )}
       </Button>
@@ -341,15 +335,15 @@ export const CoverLetterGenerator = ({
           <div className="flex flex-wrap gap-3">
             <Button onClick={handleCopy} variant="outline" className="gap-2">
               <Copy className="w-4 h-4" />
-              Copy Letter
+              {t('coverletter.copy')}
             </Button>
             <Button onClick={handleDownloadPDF} variant="outline" className="gap-2">
               <FileDown className="w-4 h-4" />
-              Download PDF
+              {t('coverletter.download')}
             </Button>
             <Button onClick={handleRefine} variant="ghost" className="gap-2">
               <RefreshCw className="w-4 h-4" />
-              Refine Letter
+              {t('coverletter.refine')}
             </Button>
             <Button 
               onClick={handleExplain} 
@@ -358,18 +352,22 @@ export const CoverLetterGenerator = ({
               disabled={loadingExplanation}
             >
               <Mail className="w-4 h-4" />
-              {loadingExplanation ? "Analyzing..." : "Explain Letter"}
+              {loadingExplanation 
+                ? (globalLanguage === 'sv' ? "Analyserar..." : "Analyzing...") 
+                : t('coverletter.explain')}
             </Button>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            ℹ️ Preview generated by AI — review before sending.
+            ℹ️ {globalLanguage === 'sv' 
+              ? "Förhandsgranskning genererad av AI — granska före sändning."
+              : "Preview generated by AI — review before sending."}
           </p>
 
           {/* Explanation Display */}
           {explanation && (
             <Card className="p-4 bg-muted/50 border-border">
-              <h4 className="text-sm font-semibold text-foreground mb-3">AI Analysis</h4>
+              <h4 className="text-sm font-semibold text-foreground mb-3">{t('coverletter.analysis')}</h4>
               <div className="text-sm text-muted-foreground whitespace-pre-line">
                 {explanation}
               </div>

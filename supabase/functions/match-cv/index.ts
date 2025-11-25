@@ -104,22 +104,39 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const systemPrompt = `You are an expert HR and recruitment AI assistant specializing in comprehensive CV analysis. Your task is to provide detailed, actionable insights for candidate-job matching.
+    const systemPrompt = language === 'sv' 
+      ? `Du är en expert HR- och rekryteringsassistent specialiserad på omfattande CV-analys. Din uppgift är att ge detaljerade, handlingsbara insikter för matchning mellan kandidat och jobb.
+
+Analysera CV:t och jobbeskrivningen noggrant och returnera sedan ett komplett JSON-objekt med:
+1. score: Övergripande matchningspoäng (0-100)
+2. confidence_score: Din tillförsikt i denna bedömning (0.0-1.0)
+3. summary: Kort 3-4 meningar som förklarar passform, styrkor och luckor (PÅ SVENSKA)
+4. matchingSkills: Topp 5 mest relevanta matchande färdigheter (PÅ SVENSKA)
+5. missingSkills: Topp 3 mest kritiska saknade färdigheter från jobbkrav (PÅ SVENSKA)
+6. extraSkills: Ytterligare värdefulla färdigheter som kandidaten besitter (PÅ SVENSKA)
+7. weights: Uppdelningspoäng för must-have (0-100), should-have (0-100), och nice-to-have (0-20) krav
+8. evidence: Upp till 6 specifika citat från CV eller JD som stöder matchningen, med källindikator (PÅ SVENSKA)
+9. star: Upp till 3 STAR-prestationer (Situation, Task, Action, Result) extraherade från CV (PÅ SVENSKA)
+10. tips: 5 handlingsbara förbättringstips med uppskattad påverkan (low/medium/high) (PÅ SVENSKA)
+11. bias_alert: Flagga eventuellt partiskt språk i jobbeskrivningen (PÅ SVENSKA)
+
+Var professionell, objektiv och datadriven. Fokusera på konkreta bevis. Skriv ALLT på svenska (sammanfattning, färdigheter, tips, etc.).`
+      : `You are an expert HR and recruitment AI assistant specializing in comprehensive CV analysis. Your task is to provide detailed, actionable insights for candidate-job matching.
 
 Analyze the CV and job description thoroughly, then return a complete JSON object with:
 1. score: Overall match score (0-100)
 2. confidence_score: Your confidence in this assessment (0.0-1.0)
-3. summary: Concise 3-4 sentence paragraph explaining fit, strengths, and gaps
-4. matchingSkills: Top 5 most relevant matching skills
-5. missingSkills: Top 3 most critical missing skills from job requirements
-6. extraSkills: Additional valuable skills the candidate possesses
+3. summary: Concise 3-4 sentence paragraph explaining fit, strengths, and gaps (IN ENGLISH)
+4. matchingSkills: Top 5 most relevant matching skills (IN ENGLISH)
+5. missingSkills: Top 3 most critical missing skills from job requirements (IN ENGLISH)
+6. extraSkills: Additional valuable skills the candidate possesses (IN ENGLISH)
 7. weights: Breakdown scores for must-have (0-100), should-have (0-100), and nice-to-have (0-20) requirements
-8. evidence: Up to 6 specific quotes from CV or JD supporting the match, with source indicator
-9. star: Up to 3 STAR achievements (Situation, Task, Action, Result) extracted from CV
-10. tips: 5 actionable improvement tips with estimated impact (low/medium/high)
-11. bias_alert: Flag any potentially biased language in job description
+8. evidence: Up to 6 specific quotes from CV or JD supporting the match, with source indicator (IN ENGLISH)
+9. star: Up to 3 STAR achievements (Situation, Task, Action, Result) extracted from CV (IN ENGLISH)
+10. tips: 5 actionable improvement tips with estimated impact (low/medium/high) (IN ENGLISH)
+11. bias_alert: Flag any potentially biased language in job description (IN ENGLISH)
 
-Be professional, objective, and data-driven. Focus on concrete evidence.`;
+Be professional, objective, and data-driven. Focus on concrete evidence. Write EVERYTHING in English (summary, skills, tips, etc.).`;
 
     const userPrompt = `Job Description:
 ${jobDescription}

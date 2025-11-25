@@ -2,6 +2,7 @@ import { Upload, FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface UploadSectionProps {
   title: string;
@@ -23,6 +24,7 @@ export const UploadSection = ({
   accept = ".pdf,.txt,.doc,.docx"
 }: UploadSectionProps) => {
   const [isDragging, setIsDragging] = useState(false);
+  const { t } = useLanguage();
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -98,7 +100,7 @@ export const UploadSection = ({
                 />
                 <label htmlFor={`file-${title}`}>
                   <Button type="button" variant="outline" asChild>
-                    <span className="cursor-pointer">Browse Files</span>
+                    <span className="cursor-pointer">{t('upload.button')}</span>
                   </Button>
                 </label>
               </div>
@@ -114,7 +116,7 @@ export const UploadSection = ({
 
               <textarea
                 className="w-full min-h-32 p-4 text-sm border border-input rounded-lg bg-background focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
-                placeholder="Paste the text content here..."
+                placeholder={t('upload.paste')}
                 value={textContent}
                 onChange={(e) => onTextChange(e.target.value)}
               />
@@ -137,6 +139,7 @@ export const UploadSection = ({
                 size="icon"
                 onClick={clearFile}
                 className="text-muted-foreground hover:text-destructive"
+                aria-label={t('upload.clear')}
               >
                 <X className="w-5 h-5" />
               </Button>

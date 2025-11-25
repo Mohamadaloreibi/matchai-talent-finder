@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, XCircle, PlusCircle, RotateCcw, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { generateMatchPDF } from "@/lib/pdfGenerator";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MatchResultProps {
   result: {
@@ -35,6 +36,8 @@ interface MatchResultProps {
 }
 
 export const MatchResult = ({ result, onReset, cvName }: MatchResultProps) => {
+  const { t } = useLanguage();
+  
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-success";
     if (score >= 60) return "text-accent";
@@ -85,13 +88,13 @@ export const MatchResult = ({ result, onReset, cvName }: MatchResultProps) => {
               className="h-3"
             />
           </div>
-          <p className="text-lg text-foreground font-medium">Match Score</p>
+          <p className="text-lg text-foreground font-medium">{t('match.score')}</p>
         </div>
       </Card>
 
       {/* Summary */}
       <Card className="p-6 shadow-md">
-        <h3 className="text-lg font-semibold text-foreground mb-3">Summary</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-3">{t('match.summary')}</h3>
         <p className="text-muted-foreground leading-relaxed">{result.summary}</p>
       </Card>
 
@@ -101,7 +104,7 @@ export const MatchResult = ({ result, onReset, cvName }: MatchResultProps) => {
         <Card className="p-6 shadow-md">
           <div className="flex items-center gap-2 mb-4">
             <CheckCircle2 className="w-5 h-5 text-success" />
-            <h3 className="font-semibold text-foreground">Matching Skills</h3>
+            <h3 className="font-semibold text-foreground">{t('match.skills.matching')}</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             {result.matchingSkills.length > 0 ? (
@@ -120,7 +123,7 @@ export const MatchResult = ({ result, onReset, cvName }: MatchResultProps) => {
         <Card className="p-6 shadow-md">
           <div className="flex items-center gap-2 mb-4">
             <XCircle className="w-5 h-5 text-destructive" />
-            <h3 className="font-semibold text-foreground">Missing Skills</h3>
+            <h3 className="font-semibold text-foreground">{t('match.skills.missing')}</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             {result.missingSkills.length > 0 ? (
@@ -139,7 +142,7 @@ export const MatchResult = ({ result, onReset, cvName }: MatchResultProps) => {
         <Card className="p-6 shadow-md">
           <div className="flex items-center gap-2 mb-4">
             <PlusCircle className="w-5 h-5 text-accent" />
-            <h3 className="font-semibold text-foreground">Extra Skills</h3>
+            <h3 className="font-semibold text-foreground">{t('match.skills.extra')}</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             {result.extraSkills.length > 0 ? (
@@ -159,11 +162,11 @@ export const MatchResult = ({ result, onReset, cvName }: MatchResultProps) => {
       <div className="flex justify-center gap-4">
         <Button onClick={handleGeneratePDF} size="lg" variant="outline" className="gap-2">
           <Download className="w-4 h-4" />
-          Download Report
+          {t('match.download')}
         </Button>
         <Button onClick={onReset} size="lg" className="gap-2">
           <RotateCcw className="w-4 h-4" />
-          Try Another Match
+          {t('match.tryAnother')}
         </Button>
       </div>
     </div>
