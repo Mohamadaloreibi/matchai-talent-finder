@@ -52,6 +52,7 @@ const Dashboard = () => {
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   const [showComparison, setShowComparison] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [hasUsedDailyAnalysis, setHasUsedDailyAnalysis] = useState(false);
   const [isCheckingQuota, setIsCheckingQuota] = useState(true);
   const { toast } = useToast();
@@ -77,25 +78,40 @@ const Dashboard = () => {
         setUser(session.user);
 
         if (session?.user) {
-          console.log('Checking quota for user:', session.user.id);
-          const { data, error } = await supabase
-            .from('analysis_logs' as any)
-            .select('created_at')
-            .eq('user_id', session.user.id)
-            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          // Check if user is admin
+          const { data: adminCheck, error: adminError } = await supabase.rpc('has_role', {
+            _user_id: session.user.id,
+            _role: 'admin'
+          });
 
-          if (error) {
-            console.error('Error checking analysis quota:', error);
-            setHasUsedDailyAnalysis(false);
-          } else if (data && 'created_at' in data) {
-            console.log('User has used daily analysis at:', (data as any).created_at);
-            setHasUsedDailyAnalysis(true);
+          if (!adminError && adminCheck) {
+            console.log('👑 Admin user detected');
+            setIsAdmin(true);
+            setHasUsedDailyAnalysis(false); // Admins have unlimited analyses
           } else {
-            console.log('User has not used daily analysis yet');
-            setHasUsedDailyAnalysis(false);
+            setIsAdmin(false);
+            
+            // Check quota for non-admin users
+            console.log('Checking quota for user:', session.user.id);
+            const { data, error } = await supabase
+              .from('analysis_logs' as any)
+              .select('created_at')
+              .eq('user_id', session.user.id)
+              .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (error) {
+              console.error('Error checking analysis quota:', error);
+              setHasUsedDailyAnalysis(false);
+            } else if (data && 'created_at' in data) {
+              console.log('User has used daily analysis at:', (data as any).created_at);
+              setHasUsedDailyAnalysis(true);
+            } else {
+              console.log('User has not used daily analysis yet');
+              setHasUsedDailyAnalysis(false);
+            }
           }
         } else {
           console.log('No user session found');
@@ -121,19 +137,32 @@ const Dashboard = () => {
       setIsCheckingQuota(true);
       
       try {
-        const { data, error } = await supabase
-          .from('analysis_logs' as any)
-          .select('created_at')
-          .eq('user_id', session.user.id)
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        // Check if user is admin
+        const { data: adminCheck, error: adminError } = await supabase.rpc('has_role', {
+          _user_id: session.user.id,
+          _role: 'admin'
+        });
 
-        if (!error && data) {
-          setHasUsedDailyAnalysis(true);
-        } else {
+        if (!adminError && adminCheck) {
+          setIsAdmin(true);
           setHasUsedDailyAnalysis(false);
+        } else {
+          setIsAdmin(false);
+          
+          const { data, error } = await supabase
+            .from('analysis_logs' as any)
+            .select('created_at')
+            .eq('user_id', session.user.id)
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (!error && data) {
+            setHasUsedDailyAnalysis(true);
+          } else {
+            setHasUsedDailyAnalysis(false);
+          }
         }
       } catch (err) {
         console.error('Error checking quota on auth change:', err);
@@ -195,7 +224,7 @@ const Dashboard = () => {
     }
 
     // Check if user has already used their daily analysis
-    if (hasUsedDailyAnalysis) {
+    if (hasUsedDailyAnalysis && !isAdmin) {
       toast({
         title: "Daily limit reached",
         description: "You can only run one analysis every 24 hours. Please try again tomorrow.",
@@ -410,9 +439,15 @@ const Dashboard = () => {
             {/* Beta info banner */}
             <Card className="bg-primary/5 border-primary/20">
               <CardContent className="py-4">
-                <p className="text-sm text-center text-muted-foreground">
-                  <span className="font-semibold text-foreground">MatchAI is in Beta.</span> Each user can run <span className="font-semibold text-primary">1 free analysis per day</span>. Sign in to use your daily analysis.
-                </p>
+                {isAdmin ? (
+                  <p className="text-sm text-center text-muted-foreground">
+                    <span className="font-semibold text-primary">👑 Admin Mode:</span> You have <span className="font-semibold text-primary">unlimited analyses</span> for testing.
+                  </p>
+                ) : (
+                  <p className="text-sm text-center text-muted-foreground">
+                    <span className="font-semibold text-foreground">MatchAI is in Beta.</span> Each user can run <span className="font-semibold text-primary">1 free analysis per day</span>. Sign in to use your daily analysis.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -489,14 +524,21 @@ const Dashboard = () => {
             <div className="flex flex-col items-center gap-4">
               {/* Daily limit status */}
               <div className="w-full max-w-2xl">
-                {!isCheckingQuota && user && !hasUsedDailyAnalysis && (
+                {!isCheckingQuota && isAdmin && (
+                  <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
+                    <p className="text-sm font-medium text-center text-foreground">
+                      👑 <span className="font-bold text-primary">Admin Access:</span> Unlimited analyses available for testing
+                    </p>
+                  </div>
+                )}
+                {!isCheckingQuota && user && !isAdmin && !hasUsedDailyAnalysis && (
                   <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-center text-foreground">
                       ✨ You have <span className="font-bold text-primary">1 free analysis</span> available today during the beta.
                     </p>
                   </div>
                 )}
-                {!isCheckingQuota && user && hasUsedDailyAnalysis && (
+                {!isCheckingQuota && user && !isAdmin && hasUsedDailyAnalysis && (
                   <div className="px-6 py-4 rounded-lg bg-destructive/10 border border-destructive/20">
                     <p className="text-sm font-medium text-center text-destructive">
                       You've used today's free analysis. Try again in 24 hours.
