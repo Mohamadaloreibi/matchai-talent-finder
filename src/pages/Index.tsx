@@ -56,6 +56,7 @@ const Index = () => {
   const [analyzedJobText, setAnalyzedJobText] = useState("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [hasUsedDailyAnalysis, setHasUsedDailyAnalysis] = useState(false);
   const [isCheckingQuota, setIsCheckingQuota] = useState(true);
   const { toast } = useToast();
@@ -69,26 +70,40 @@ const Index = () => {
         setUser(session?.user || null);
 
         if (session?.user) {
-          console.log('Checking quota for user:', session.user.id);
-          // Check if user has used their daily analysis
-          const { data, error } = await supabase
-            .from('analysis_logs' as any)
-            .select('created_at')
-            .eq('user_id', session.user.id)
-            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          // Check if user is admin
+          const { data: adminCheck, error: adminError } = await supabase.rpc('has_role', {
+            _user_id: session.user.id,
+            _role: 'admin'
+          });
 
-          if (error) {
-            console.error('Error checking analysis quota:', error);
-            setHasUsedDailyAnalysis(false);
-          } else if (data && 'created_at' in data) {
-            console.log('User has used daily analysis at:', (data as any).created_at);
-            setHasUsedDailyAnalysis(true);
+          if (!adminError && adminCheck) {
+            console.log('👑 Admin user detected');
+            setIsAdmin(true);
+            setHasUsedDailyAnalysis(false); // Admins have unlimited analyses
           } else {
-            console.log('User has not used daily analysis yet');
-            setHasUsedDailyAnalysis(false);
+            setIsAdmin(false);
+            
+            console.log('Checking quota for user:', session.user.id);
+            // Check if user has used their daily analysis
+            const { data, error } = await supabase
+              .from('analysis_logs' as any)
+              .select('created_at')
+              .eq('user_id', session.user.id)
+              .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (error) {
+              console.error('Error checking analysis quota:', error);
+              setHasUsedDailyAnalysis(false);
+            } else if (data && 'created_at' in data) {
+              console.log('User has used daily analysis at:', (data as any).created_at);
+              setHasUsedDailyAnalysis(true);
+            } else {
+              console.log('User has not used daily analysis yet');
+              setHasUsedDailyAnalysis(false);
+            }
           }
         } else {
           console.log('No user session found');
@@ -114,19 +129,32 @@ const Index = () => {
         // Re-check quota when auth state changes
         setIsCheckingQuota(true);
         try {
-          const { data, error } = await supabase
-            .from('analysis_logs' as any)
-            .select('created_at')
-            .eq('user_id', session.user.id)
-            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          // Check if user is admin
+          const { data: adminCheck, error: adminError } = await supabase.rpc('has_role', {
+            _user_id: session.user.id,
+            _role: 'admin'
+          });
 
-          if (!error && data) {
-            setHasUsedDailyAnalysis(true);
-          } else {
+          if (!adminError && adminCheck) {
+            setIsAdmin(true);
             setHasUsedDailyAnalysis(false);
+          } else {
+            setIsAdmin(false);
+            
+            const { data, error } = await supabase
+              .from('analysis_logs' as any)
+              .select('created_at')
+              .eq('user_id', session.user.id)
+              .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (!error && data) {
+              setHasUsedDailyAnalysis(true);
+            } else {
+              setHasUsedDailyAnalysis(false);
+            }
           }
         } catch (err) {
           console.error('Error checking quota on auth change:', err);
@@ -186,8 +214,8 @@ const Index = () => {
       return;
     }
 
-    // Check if user has already used their daily analysis
-    if (hasUsedDailyAnalysis) {
+    // Check if user has already used their daily analysis (skip check for admins)
+    if (hasUsedDailyAnalysis && !isAdmin) {
       toast({
         title: language === 'sv' ? "Daglig gräns nådd" : "Daily limit reached",
         description: t('analyze.quota.used'),
@@ -331,14 +359,21 @@ const Index = () => {
             <div className="flex flex-col items-center gap-4">
               {/* Beta status and daily limit info */}
               <div className="w-full max-w-2xl">
-                {!isCheckingQuota && user && !hasUsedDailyAnalysis && (
+                {!isCheckingQuota && isAdmin && (
+                  <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
+                    <p className="text-sm font-medium text-center text-foreground">
+                      👑 <span className="font-bold text-primary">{language === 'sv' ? 'Admin-åtkomst' : 'Admin Access'}:</span> {language === 'sv' ? 'Obegränsade analyser tillgängliga för testning' : 'Unlimited analyses available for testing'}
+                    </p>
+                  </div>
+                )}
+                {!isCheckingQuota && user && !isAdmin && !hasUsedDailyAnalysis && (
                   <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-center text-foreground">
                       ✨ {t('analyze.quota.available')}
                     </p>
                   </div>
                 )}
-                {!isCheckingQuota && user && hasUsedDailyAnalysis && (
+                {!isCheckingQuota && user && !isAdmin && hasUsedDailyAnalysis && (
                   <div className="px-6 py-4 rounded-lg bg-destructive/10 border border-destructive/20">
                     <p className="text-sm font-medium text-center text-destructive">
                       {t('analyze.quota.used')}
@@ -357,7 +392,7 @@ const Index = () => {
               <Button
                 size="lg"
                 onClick={handleAnalyze}
-                disabled={!canAnalyze || isAnalyzing || hasUsedDailyAnalysis || !user || isCheckingQuota}
+                disabled={!canAnalyze || isAnalyzing || (hasUsedDailyAnalysis && !isAdmin) || !user || isCheckingQuota}
                 className="gap-2 px-8 py-6 text-lg"
               >
                 {isAnalyzing ? (
