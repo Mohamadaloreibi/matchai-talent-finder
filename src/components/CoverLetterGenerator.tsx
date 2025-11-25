@@ -32,6 +32,7 @@ export const CoverLetterGenerator = ({
 }: CoverLetterGeneratorProps) => {
   const { language: globalLanguage, t } = useLanguage();
   const [tone, setTone] = useState<string>("professional");
+  const [languagePref, setLanguagePref] = useState<string>("sv");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedLetter, setGeneratedLetter] = useState<string>("");
   const [detectedLanguage, setDetectedLanguage] = useState<string>("en");
@@ -69,6 +70,7 @@ export const CoverLetterGenerator = ({
           setGeneratedLetter(parsed.letter);
           setDetectedLanguage(parsed.language || "en");
           setTone(parsed.tone || "professional");
+          setLanguagePref(parsed.languagePref || "sv");
         }
       } catch (error) {
         console.error("Failed to load saved letter:", error);
@@ -87,7 +89,7 @@ export const CoverLetterGenerator = ({
           job_description: jobDescription,
           match_summary: matchSummary,
           matching_skills: matchingSkills,
-          language_pref: globalLanguage, // Use global language from context
+          language_pref: languagePref, // Use local language preference
           tone: tone,
           job_title: jobTitle,
           company: company,
@@ -112,6 +114,7 @@ export const CoverLetterGenerator = ({
           letter: letterText,
           language: lang,
           tone: tone,
+          languagePref: languagePref,
           hash: currentHash,
         })
       );
@@ -287,6 +290,22 @@ export const CoverLetterGenerator = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Language Selector */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">
+            {globalLanguage === 'sv' ? 'Språk' : 'Language'}
+          </label>
+          <Select value={languagePref} onValueChange={setLanguagePref}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sv">Svenska</SelectItem>
+              <SelectItem value="en">English</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Tone Selector */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">{t('coverletter.tone')}</label>
