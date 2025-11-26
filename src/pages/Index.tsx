@@ -361,8 +361,9 @@ const Index = () => {
 
             {/* Analyze Button */}
             <div className="flex flex-col items-center gap-4">
-              {/* Beta status and daily limit info */}
-              <div className="w-full max-w-2xl">
+              {/* Debug info and status messages */}
+              <div className="w-full max-w-2xl space-y-2">
+                {/* Admin status */}
                 {!isCheckingQuota && isAdmin && (
                   <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-center text-foreground">
@@ -370,7 +371,18 @@ const Index = () => {
                     </p>
                   </div>
                 )}
-                {!isCheckingQuota && user && !isAdmin && !hasUsedDailyAnalysis && (
+                
+                {/* Missing CV or Job Description warning */}
+                {!canAnalyze && (
+                  <div className="px-6 py-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-sm font-medium text-center text-amber-700 dark:text-amber-400">
+                      ⚠️ {language === 'sv' ? 'Ladda upp både CV och jobbeskrivning för att analysera' : 'Please upload both CV and job description to analyze'}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Quota status for non-admins */}
+                {!isCheckingQuota && user && !isAdmin && canAnalyze && !hasUsedDailyAnalysis && (
                   <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-center text-foreground">
                       ✨ {t('analyze.quota.available')}
