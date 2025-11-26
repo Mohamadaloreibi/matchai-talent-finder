@@ -254,7 +254,10 @@ const Index = () => {
       if (error) {
         // Handle rate limit error
         if (error.message?.includes('daily_limit_reached') || data?.error === 'daily_limit_reached') {
-          setHasUsedDailyAnalysis(true);
+          // Only set daily analysis flag for non-admin users
+          if (!isAdmin) {
+            setHasUsedDailyAnalysis(true);
+          }
           toast({
             title: language === 'sv' ? "Daglig gräns nådd" : "Daily limit reached",
             description: t('analyze.quota.used'),
