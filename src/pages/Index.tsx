@@ -282,7 +282,11 @@ const Index = () => {
       setAnalyzedCvText(cvContent);
       setAnalyzedJobText(jobContent);
       saveToHistory(data);
-      setHasUsedDailyAnalysis(true);
+      
+      // Only set daily analysis flag for non-admin users
+      if (!isAdmin) {
+        setHasUsedDailyAnalysis(true);
+      }
       
       toast({
         title: language === 'sv' ? "Analys klar!" : "Analysis Complete!",
