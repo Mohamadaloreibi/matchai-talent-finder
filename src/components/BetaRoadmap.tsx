@@ -39,9 +39,9 @@ För företag: ladda upp en roll och få AI-genererade kandidatprofiler som matc
     },
     {
       icon: FlaskConical,
-      title: "🧪 1 gratis AI-analys per dag (Beta)",
+      title: "🧪 2 gratis AI-analyser per dag (Beta)",
       description: `Under betan får alla användare:
-• 1 analys var 24:e timme
+• 2 analyser var 24:e timme
 • Möjlighet att spara sina analyser
 • Planer på fler analyser med uppgradering längre fram.`
     },
