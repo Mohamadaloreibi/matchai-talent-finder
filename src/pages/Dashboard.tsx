@@ -98,18 +98,16 @@ const Dashboard = () => {
               .select('created_at')
               .eq('user_id', session.user.id)
               .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
+              .order('created_at', { ascending: false });
 
             if (error) {
               console.error('Error checking analysis quota:', error);
               setHasUsedDailyAnalysis(false);
-            } else if (data && 'created_at' in data) {
-              console.log('User has used daily analysis at:', (data as any).created_at);
+            } else if (data && data.length >= 2) {
+              console.log('User has used both daily analyses. Count:', data.length);
               setHasUsedDailyAnalysis(true);
             } else {
-              console.log('User has not used daily analysis yet');
+              console.log('User has analyses remaining. Used:', data?.length || 0, 'of 2');
               setHasUsedDailyAnalysis(false);
             }
           }
@@ -154,11 +152,9 @@ const Dashboard = () => {
             .select('created_at')
             .eq('user_id', session.user.id)
             .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .order('created_at', { ascending: false });
 
-          if (!error && data) {
+          if (!error && data && data.length >= 2) {
             setHasUsedDailyAnalysis(true);
           } else {
             setHasUsedDailyAnalysis(false);
@@ -223,11 +219,11 @@ const Dashboard = () => {
       return;
     }
 
-    // Check if user has already used their daily analysis
+    // Check if user has already used their 2 daily analyses
     if (hasUsedDailyAnalysis && !isAdmin) {
       toast({
         title: "Daily limit reached",
-        description: "You can only run one analysis every 24 hours. Please try again tomorrow.",
+        description: "You can only run 2 analyses every 24 hours. Please try again tomorrow.",
         variant: "destructive",
       });
       return;
@@ -274,10 +270,13 @@ const Dashboard = () => {
         if (error) {
           // Handle rate limit error
           if (error.message?.includes('daily_limit_reached') || data?.error === 'daily_limit_reached') {
-            setHasUsedDailyAnalysis(true);
+            // Only set daily analysis flag for non-admin users
+            if (!isAdmin) {
+              setHasUsedDailyAnalysis(true);
+            }
             toast({
               title: "Daily limit reached",
-              description: "You can only run one analysis every 24 hours. Please try again tomorrow.",
+              description: "You can only run 2 analyses every 24 hours. Please try again tomorrow.",
               variant: "destructive",
             });
             setIsAnalyzing(false);
@@ -318,6 +317,11 @@ const Dashboard = () => {
       const updated = [dashboard, ...savedDashboards].slice(0, 5);
       setSavedDashboards(updated);
       localStorage.setItem("employerDashboards", JSON.stringify(updated));
+
+      // Only set daily analysis flag for non-admin users
+      if (!isAdmin) {
+        setHasUsedDailyAnalysis(true);
+      }
 
       toast({
         title: "Analysis Complete!",
@@ -445,7 +449,7 @@ const Dashboard = () => {
                   </p>
                 ) : (
                   <p className="text-sm text-center text-muted-foreground">
-                    <span className="font-semibold text-foreground">MatchAI is in Beta.</span> Each user can run <span className="font-semibold text-primary">1 free analysis per day</span>. Sign in to use your daily analysis.
+                    <span className="font-semibold text-foreground">MatchAI is in Beta.</span> Each user can run <span className="font-semibold text-primary">2 free analyses per day</span>. Sign in to use your daily analyses.
                   </p>
                 )}
               </CardContent>
@@ -534,14 +538,14 @@ const Dashboard = () => {
                 {!isCheckingQuota && user && !isAdmin && !hasUsedDailyAnalysis && (
                   <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-center text-foreground">
-                      ✨ You have <span className="font-bold text-primary">1 free analysis</span> available today during the beta.
+                      ✨ You have <span className="font-bold text-primary">2 free analyses</span> available today during the beta.
                     </p>
                   </div>
                 )}
                 {!isCheckingQuota && user && !isAdmin && hasUsedDailyAnalysis && (
                   <div className="px-6 py-4 rounded-lg bg-destructive/10 border border-destructive/20">
                     <p className="text-sm font-medium text-center text-destructive">
-                      You've used today's free analysis. Try again in 24 hours.
+                      You've used your 2 free analyses. Try again in 24 hours.
                     </p>
                   </div>
                 )}

@@ -84,24 +84,22 @@ const Index = () => {
             setIsAdmin(false);
             
             console.log('Checking quota for user:', session.user.id);
-            // Check if user has used their daily analysis
+            // Check if user has used their 2 daily analyses
             const { data, error } = await supabase
               .from('analysis_logs' as any)
               .select('created_at')
               .eq('user_id', session.user.id)
               .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
+              .order('created_at', { ascending: false });
 
             if (error) {
               console.error('Error checking analysis quota:', error);
               setHasUsedDailyAnalysis(false);
-            } else if (data && 'created_at' in data) {
-              console.log('User has used daily analysis at:', (data as any).created_at);
+            } else if (data && data.length >= 2) {
+              console.log('User has used both daily analyses. Count:', data.length);
               setHasUsedDailyAnalysis(true);
             } else {
-              console.log('User has not used daily analysis yet');
+              console.log('User has analyses remaining. Used:', data?.length || 0, 'of 2');
               setHasUsedDailyAnalysis(false);
             }
           }
@@ -146,11 +144,9 @@ const Index = () => {
               .select('created_at')
               .eq('user_id', session.user.id)
               .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
+              .order('created_at', { ascending: false });
 
-            if (!error && data) {
+            if (!error && data && data.length >= 2) {
               setHasUsedDailyAnalysis(true);
             } else {
               setHasUsedDailyAnalysis(false);
@@ -214,11 +210,13 @@ const Index = () => {
       return;
     }
 
-    // Check if user has already used their daily analysis (skip check for admins)
+    // Check if user has already used their 2 daily analyses (skip check for admins)
     if (hasUsedDailyAnalysis && !isAdmin) {
       toast({
         title: language === 'sv' ? "Daglig gräns nådd" : "Daily limit reached",
-        description: t('analyze.quota.used'),
+        description: language === 'sv' 
+          ? "Du har använt dina 2 gratis analyser. Försök igen om 24 timmar." 
+          : "You've used your 2 free analyses. Try again in 24 hours.",
         variant: "destructive",
       });
       return;
@@ -388,21 +386,25 @@ const Index = () => {
                 {!isCheckingQuota && user && !isAdmin && canAnalyze && !hasUsedDailyAnalysis && (
                   <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-center text-foreground">
-                      ✨ {t('analyze.quota.available')}
+                      ✨ {language === 'sv' ? 'Du har 2 gratis analyser tillgängliga idag under beta-fasen' : 'You have 2 free analyses available today during the beta'}
                     </p>
                   </div>
                 )}
                 {!isCheckingQuota && user && !isAdmin && hasUsedDailyAnalysis && (
                   <div className="px-6 py-4 rounded-lg bg-destructive/10 border border-destructive/20">
                     <p className="text-sm font-medium text-center text-destructive">
-                      {t('analyze.quota.used')}
+                      {language === 'sv' 
+                        ? 'Du har använt dina 2 gratis analyser. Försök igen om 24 timmar.' 
+                        : "You've used your 2 free analyses. Try again in 24 hours."}
                     </p>
                   </div>
                 )}
                 {!isCheckingQuota && !user && (
                   <div className="px-6 py-4 rounded-lg bg-muted border border-border">
                     <p className="text-sm font-medium text-center text-muted-foreground">
-                      {t('analyze.quota.signin')}
+                      {language === 'sv' 
+                        ? 'Logga in för att använda dina 2 gratis analyser per dag under beta-fasen.' 
+                        : 'Sign in to use your 2 free analyses per day during the beta.'}
                     </p>
                   </div>
                 )}

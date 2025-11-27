@@ -66,36 +66,34 @@ serve(async (req) => {
     if (isAdmin) {
       console.log('👑 Admin user detected - skipping quota check');
     } else {
-      // Check if user has already run an analysis in the last 24 hours (non-admins only)
+      // Check if user has already run 2 analyses in the last 24 hours (non-admins only)
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       console.log('Checking for analysis logs since:', twentyFourHoursAgo.toISOString());
       
-      const { data: recentAnalysis, error: checkError } = await supabase
+      const { data: recentAnalyses, error: checkError } = await supabase
         .from('analysis_logs')
         .select('created_at')
         .eq('user_id', user.id)
         .gte('created_at', twentyFourHoursAgo.toISOString())
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
 
       if (checkError) {
         console.error('❌ Error checking analysis logs:', checkError);
         // Continue with analysis if we can't check logs (fail open)
       }
 
-      if (recentAnalysis) {
-        const lastAnalysisTime = new Date(recentAnalysis.created_at);
+      if (recentAnalyses && recentAnalyses.length >= 2) {
+        const lastAnalysisTime = new Date(recentAnalyses[0].created_at);
         const hoursUntilReset = Math.ceil((lastAnalysisTime.getTime() + 24 * 60 * 60 * 1000 - Date.now()) / (60 * 60 * 1000));
         
-        console.log('❌ Daily limit reached. Last analysis:', recentAnalysis.created_at);
+        console.log('❌ Daily limit reached. Analyses count:', recentAnalyses.length);
         console.log('⏰ Hours until reset:', hoursUntilReset);
         
         return new Response(
           JSON.stringify({ 
             error: 'daily_limit_reached',
-            message: 'You can only run one analysis every 24 hours. Try again tomorrow.',
-            last_analysis_at: recentAnalysis.created_at,
+            message: 'You can only run 2 analyses every 24 hours. Try again tomorrow.',
+            last_analysis_at: recentAnalyses[0].created_at,
             hours_until_reset: hoursUntilReset
           }),
           { 
@@ -105,7 +103,7 @@ serve(async (req) => {
         );
       }
       
-      console.log('✓ No recent analysis found. User has quota available.');
+      console.log('✓ User has quota available. Analyses used:', recentAnalyses?.length || 0, 'of 2');
     }
 
     const { cvText, jobDescription, candidateName, jobTitle, company, language = 'en' } = await req.json();

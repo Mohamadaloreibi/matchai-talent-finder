@@ -27,10 +27,10 @@ const translations: Record<Language, Record<string, string>> = {
     // Analysis
     'analyze.button': 'Analysera matchning',
     'analyze.loading': 'AI analyserar din matchning...',
-    'analyze.quota.available': 'Du har 1 gratis analys tillgänglig idag under betan',
-    'analyze.quota.used': 'Du har använt dagens gratis analys. Försök igen om 24 timmar.',
-    'analyze.quota.signin': 'Logga in för att använda din 1 gratis analys per dag under betan.',
-    'analyze.error.signin': 'Inloggning krävs: Skapa ett gratis konto eller logga in för att köra din dagliga analys.',
+    'analyze.quota.available': 'Du har 2 gratis analyser tillgängliga idag under betan',
+    'analyze.quota.used': 'Du har använt dina 2 gratis analyser. Försök igen om 24 timmar.',
+    'analyze.quota.signin': 'Logga in för att använda dina 2 gratis analyser per dag under betan.',
+    'analyze.error.signin': 'Inloggning krävs: Skapa ett gratis konto eller logga in för att köra dina dagliga analyser.',
     
     // Match results
     'match.score': 'Matchningspoäng',
@@ -90,10 +90,10 @@ const translations: Record<Language, Record<string, string>> = {
     // Analysis
     'analyze.button': 'Analyze Match',
     'analyze.loading': 'AI is analyzing your match...',
-    'analyze.quota.available': 'You have 1 free analysis available today during beta',
-    'analyze.quota.used': 'You\'ve used today\'s free analysis. Try again in 24 hours.',
-    'analyze.quota.signin': 'Sign in to use your 1 free analysis per day during beta.',
-    'analyze.error.signin': 'Sign in required: Create a free account or sign in to run your daily analysis.',
+    'analyze.quota.available': 'You have 2 free analyses available today during beta',
+    'analyze.quota.used': 'You\'ve used your 2 free analyses. Try again in 24 hours.',
+    'analyze.quota.signin': 'Sign in to use your 2 free analyses per day during beta.',
+    'analyze.error.signin': 'Sign in required: Create a free account or sign in to run your daily analyses.',
     
     // Match results
     'match.score': 'Match Score',
