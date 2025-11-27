@@ -12,6 +12,8 @@ import { Sparkles, FileDown, Users, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { readFileAsText } from "@/lib/pdfReader";
+import { fetchJobDescriptionFromURL, isValidURL } from "@/lib/urlJobFetcher";
 
 interface CandidateResult {
   id: string;
@@ -54,6 +56,7 @@ const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasUsedDailyAnalysis, setHasUsedDailyAnalysis] = useState(false);
+  const [analysisCount, setAnalysisCount] = useState(0); // Track how many analyses used
   const [isCheckingQuota, setIsCheckingQuota] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -88,6 +91,7 @@ const Dashboard = () => {
             console.log('👑 Admin user detected');
             setIsAdmin(true);
             setHasUsedDailyAnalysis(false); // Admins have unlimited analyses
+            setAnalysisCount(0);
           } else {
             setIsAdmin(false);
             
@@ -103,21 +107,26 @@ const Dashboard = () => {
             if (error) {
               console.error('Error checking analysis quota:', error);
               setHasUsedDailyAnalysis(false);
+              setAnalysisCount(0);
             } else if (data && data.length >= 2) {
               console.log('User has used both daily analyses. Count:', data.length);
               setHasUsedDailyAnalysis(true);
+              setAnalysisCount(2);
             } else {
               console.log('User has analyses remaining. Used:', data?.length || 0, 'of 2');
               setHasUsedDailyAnalysis(false);
+              setAnalysisCount(data?.length || 0);
             }
           }
         } else {
           console.log('No user session found');
           setHasUsedDailyAnalysis(false);
+          setAnalysisCount(0);
         }
       } catch (err) {
         console.error('Error in checkAuthAndQuota:', err);
         setHasUsedDailyAnalysis(false);
+        setAnalysisCount(0);
       } finally {
         setIsCheckingQuota(false);
       }
@@ -144,6 +153,7 @@ const Dashboard = () => {
         if (!adminError && adminCheck) {
           setIsAdmin(true);
           setHasUsedDailyAnalysis(false);
+          setAnalysisCount(0);
         } else {
           setIsAdmin(false);
           
@@ -156,13 +166,16 @@ const Dashboard = () => {
 
           if (!error && data && data.length >= 2) {
             setHasUsedDailyAnalysis(true);
+            setAnalysisCount(2);
           } else {
             setHasUsedDailyAnalysis(false);
+            setAnalysisCount(data?.length || 0);
           }
         }
       } catch (err) {
         console.error('Error checking quota on auth change:', err);
         setHasUsedDailyAnalysis(false);
+        setAnalysisCount(0);
       } finally {
         setIsCheckingQuota(false);
       }
@@ -183,15 +196,6 @@ const Dashboard = () => {
     }
   }, []);
 
-  const readFileAsText = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
-      reader.onerror = reject;
-      reader.readAsText(file);
-    });
-  };
-
   const handleCvFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
@@ -208,6 +212,8 @@ const Dashboard = () => {
   };
 
   const handleAnalyzeBatch = async () => {
+    console.log('🚀 Batch analyze triggered on Employer Dashboard');
+    
     // Check if user is logged in
     if (!user) {
       toast({
@@ -219,17 +225,38 @@ const Dashboard = () => {
       return;
     }
 
-    // Check if user has already used their 2 daily analyses
+    // Check if user has already used their 2 daily analyses (skip for admins)
     if (hasUsedDailyAnalysis && !isAdmin) {
       toast({
         title: "Daily limit reached",
-        description: "You can only run 2 analyses every 24 hours. Please try again tomorrow.",
+        description: "You've used your 2 free analyses. Try again in 24 hours.",
         variant: "destructive",
       });
       return;
     }
 
-    const jobContent = jobText || (jobFile ? await readFileAsText(jobFile) : "");
+    // Handle job description - check for URL first
+    let jobContent = jobText;
+    
+    if (jobContent && isValidURL(jobContent)) {
+      try {
+        toast({
+          title: "Fetching job description...",
+          description: "Reading job posting from URL",
+        });
+        jobContent = await fetchJobDescriptionFromURL(jobContent);
+        setJobText(jobContent);
+      } catch (error) {
+        toast({
+          title: "Could not fetch URL",
+          description: "Please copy and paste the job description instead",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else if (jobFile) {
+      jobContent = await readFileAsText(jobFile);
+    }
 
     if (!jobContent) {
       toast({
@@ -254,7 +281,9 @@ const Dashboard = () => {
 
     try {
       for (const cvFile of cvFiles) {
+        console.log('📄 Processing CV file:', cvFile.name);
         const cvContent = await readFileAsText(cvFile);
+        console.log('✓ CV text extracted, length:', cvContent.length);
         
         const { data, error } = await supabase.functions.invoke("match-cv", {
           body: {
@@ -321,6 +350,7 @@ const Dashboard = () => {
       // Only set daily analysis flag for non-admin users
       if (!isAdmin) {
         setHasUsedDailyAnalysis(true);
+        setAnalysisCount(prev => prev + 1);
       }
 
       toast({
@@ -445,11 +475,11 @@ const Dashboard = () => {
               <CardContent className="py-4">
                 {isAdmin ? (
                   <p className="text-sm text-center text-muted-foreground">
-                    <span className="font-semibold text-primary">👑 Admin Mode:</span> You have <span className="font-semibold text-primary">unlimited analyses</span> for testing.
+                    <span className="font-semibold text-primary">👑 Admin Mode:</span> Du har <span className="font-semibold text-primary">obegränsade analyser</span> för testning.
                   </p>
                 ) : (
                   <p className="text-sm text-center text-muted-foreground">
-                    <span className="font-semibold text-foreground">MatchAI is in Beta.</span> Each user can run <span className="font-semibold text-primary">2 free analyses per day</span>. Sign in to use your daily analyses.
+                    <span className="font-semibold text-foreground">MatchAI är i Beta.</span> Varje användare kan köra <span className="font-semibold text-primary">2 gratis analyser per dag</span>. Logga in för att använda dina dagliga analyser.
                   </p>
                 )}
               </CardContent>
@@ -535,17 +565,24 @@ const Dashboard = () => {
                     </p>
                   </div>
                 )}
-                {!isCheckingQuota && user && !isAdmin && !hasUsedDailyAnalysis && (
+                {!isCheckingQuota && user && !isAdmin && analysisCount === 0 && (
                   <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-center text-foreground">
-                      ✨ You have <span className="font-bold text-primary">2 free analyses</span> available today during the beta.
+                      ✨ Du har <span className="font-bold text-primary">2 gratis analyser</span> per dag under beta-fasen.
+                    </p>
+                  </div>
+                )}
+                {!isCheckingQuota && user && !isAdmin && analysisCount === 1 && (
+                  <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
+                    <p className="text-sm font-medium text-center text-foreground">
+                      ⭐ Du har <span className="font-bold text-primary">1 gratis analys</span> kvar idag.
                     </p>
                   </div>
                 )}
                 {!isCheckingQuota && user && !isAdmin && hasUsedDailyAnalysis && (
                   <div className="px-6 py-4 rounded-lg bg-destructive/10 border border-destructive/20">
                     <p className="text-sm font-medium text-center text-destructive">
-                      You've used your 2 free analyses. Try again in 24 hours.
+                      ❌ Du har använt dina två gratis analyser. Försök igen om 24 timmar.
                     </p>
                   </div>
                 )}
@@ -554,7 +591,14 @@ const Dashboard = () => {
               <Button
                 size="lg"
                 onClick={handleAnalyzeBatch}
-                disabled={!jobText && !jobFile || cvFiles.length === 0 || isAnalyzing || hasUsedDailyAnalysis || !user || isCheckingQuota}
+                disabled={
+                  (!jobText && !jobFile) ||
+                  cvFiles.length === 0 ||
+                  isAnalyzing ||
+                  isCheckingQuota ||
+                  !user ||
+                  (hasUsedDailyAnalysis && !isAdmin)
+                }
                 className="gap-2 px-8 py-6 text-lg"
               >
                 {isAnalyzing ? (

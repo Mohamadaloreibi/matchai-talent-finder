@@ -11,6 +11,8 @@ import { Sparkles } from "lucide-react";
 import { Header } from "@/components/Header";
 import { BetaRoadmap } from "@/components/BetaRoadmap";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { readFileAsText } from "@/lib/pdfReader";
+import { fetchJobDescriptionFromURL, isValidURL } from "@/lib/urlJobFetcher";
 
 interface MatchResultData {
   score: number;
@@ -58,6 +60,7 @@ const Index = () => {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasUsedDailyAnalysis, setHasUsedDailyAnalysis] = useState(false);
+  const [analysisCount, setAnalysisCount] = useState(0); // Track how many analyses used (0, 1, or 2)
   const [isCheckingQuota, setIsCheckingQuota] = useState(true);
   const { toast } = useToast();
   const { language, t } = useLanguage();
@@ -80,6 +83,7 @@ const Index = () => {
             console.log('👑 Admin user detected');
             setIsAdmin(true);
             setHasUsedDailyAnalysis(false); // Admins have unlimited analyses
+            setAnalysisCount(0);
           } else {
             setIsAdmin(false);
             
@@ -95,21 +99,26 @@ const Index = () => {
             if (error) {
               console.error('Error checking analysis quota:', error);
               setHasUsedDailyAnalysis(false);
+              setAnalysisCount(0);
             } else if (data && data.length >= 2) {
               console.log('User has used both daily analyses. Count:', data.length);
               setHasUsedDailyAnalysis(true);
+              setAnalysisCount(2);
             } else {
               console.log('User has analyses remaining. Used:', data?.length || 0, 'of 2');
               setHasUsedDailyAnalysis(false);
+              setAnalysisCount(data?.length || 0);
             }
           }
         } else {
           console.log('No user session found');
           setHasUsedDailyAnalysis(false);
+          setAnalysisCount(0);
         }
       } catch (err) {
         console.error('Error in checkAuthAndQuota:', err);
         setHasUsedDailyAnalysis(false);
+        setAnalysisCount(0);
       } finally {
         setIsCheckingQuota(false);
       }
@@ -122,6 +131,7 @@ const Index = () => {
       setUser(session?.user || null);
       if (!session?.user) {
         setHasUsedDailyAnalysis(false);
+        setAnalysisCount(0);
         setIsCheckingQuota(false);
       } else {
         // Re-check quota when auth state changes
@@ -136,6 +146,7 @@ const Index = () => {
           if (!adminError && adminCheck) {
             setIsAdmin(true);
             setHasUsedDailyAnalysis(false);
+            setAnalysisCount(0);
           } else {
             setIsAdmin(false);
             
@@ -148,13 +159,16 @@ const Index = () => {
 
             if (!error && data && data.length >= 2) {
               setHasUsedDailyAnalysis(true);
+              setAnalysisCount(2);
             } else {
               setHasUsedDailyAnalysis(false);
+              setAnalysisCount(data?.length || 0);
             }
           }
         } catch (err) {
           console.error('Error checking quota on auth change:', err);
           setHasUsedDailyAnalysis(false);
+          setAnalysisCount(0);
         } finally {
           setIsCheckingQuota(false);
         }
@@ -190,16 +204,9 @@ const Index = () => {
     localStorage.setItem("matchHistory", JSON.stringify(newHistory));
   };
 
-  const readFileAsText = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
-      reader.onerror = reject;
-      reader.readAsText(file);
-    });
-  };
-
   const handleAnalyze = async () => {
+    console.log('🚀 Analyze triggered on main page');
+    
     // Check if user is logged in
     if (!user) {
       toast({
@@ -222,9 +229,34 @@ const Index = () => {
       return;
     }
 
-    // Validate inputs
+    // Validate inputs and handle URL job descriptions
+    let jobContent = jobText;
+    
+    // Check if job text is a URL and fetch if needed
+    if (jobContent && isValidURL(jobContent)) {
+      try {
+        toast({
+          title: language === 'sv' ? "Hämtar jobbeskrivning..." : "Fetching job description...",
+          description: language === 'sv' ? "Läser jobbannonsen från URL" : "Reading job posting from URL",
+        });
+        jobContent = await fetchJobDescriptionFromURL(jobContent);
+        setJobText(jobContent); // Update the text area with fetched content
+      } catch (error) {
+        toast({
+          title: language === 'sv' ? "Kunde inte hämta URL" : "Could not fetch URL",
+          description: language === 'sv' 
+            ? "Vänligen kopiera och klistra in jobbeskrivningen istället" 
+            : "Please copy and paste the job description instead",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else if (jobFile) {
+      jobContent = await readFileAsText(jobFile);
+    }
+    
+    // Read CV content
     const cvContent = cvText || (cvFile ? await readFileAsText(cvFile) : "");
-    const jobContent = jobText || (jobFile ? await readFileAsText(jobFile) : "");
 
     if (!cvContent || !jobContent) {
       toast({
@@ -252,10 +284,11 @@ const Index = () => {
       if (error) {
         // Handle rate limit error
         if (error.message?.includes('daily_limit_reached') || data?.error === 'daily_limit_reached') {
-          // Only set daily analysis flag for non-admin users
-          if (!isAdmin) {
-            setHasUsedDailyAnalysis(true);
-          }
+      // Only set daily analysis flag for non-admin users
+      if (!isAdmin) {
+        setHasUsedDailyAnalysis(true);
+        setAnalysisCount(prev => prev + 1);
+      }
           toast({
             title: language === 'sv' ? "Daglig gräns nådd" : "Daily limit reached",
             description: t('analyze.quota.used'),
@@ -329,7 +362,10 @@ const Index = () => {
     setAnalyzedJobText("");
   };
 
-  const canAnalyze = (cvFile || cvText) && (jobFile || jobText);
+  // Button should be enabled when we have both CV and job description inputs
+  const hasJobInput = !!(jobFile || jobText);
+  const hasCvInput = !!(cvFile || cvText);
+  const canAnalyze = hasJobInput && hasCvInput;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
@@ -368,7 +404,7 @@ const Index = () => {
                 {!isCheckingQuota && isAdmin && (
                   <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-center text-foreground">
-                      👑 <span className="font-bold text-primary">{language === 'sv' ? 'Admin-åtkomst' : 'Admin Access'}:</span> {language === 'sv' ? 'Obegränsade analyser tillgängliga för testning' : 'Unlimited analyses available for testing'}
+                      👑 <span className="font-bold text-primary">{language === 'sv' ? 'Admin Mode' : 'Admin Mode'}:</span> {language === 'sv' ? 'Obegränsade analyser' : 'Unlimited analyses'}
                     </p>
                   </div>
                 )}
@@ -383,18 +419,25 @@ const Index = () => {
                 )}
                 
                 {/* Quota status for non-admins */}
-                {!isCheckingQuota && user && !isAdmin && canAnalyze && !hasUsedDailyAnalysis && (
+                {!isCheckingQuota && user && !isAdmin && canAnalyze && analysisCount === 0 && (
                   <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-center text-foreground">
-                      ✨ {language === 'sv' ? 'Du har 2 gratis analyser tillgängliga idag under beta-fasen' : 'You have 2 free analyses available today during the beta'}
+                      ✨ {language === 'sv' ? 'Du har 2 gratis analyser per dag under betan' : 'You have 2 free analyses per day during beta'}
+                    </p>
+                  </div>
+                )}
+                {!isCheckingQuota && user && !isAdmin && canAnalyze && analysisCount === 1 && (
+                  <div className="px-6 py-4 rounded-lg bg-primary/10 border border-primary/20">
+                    <p className="text-sm font-medium text-center text-foreground">
+                      ⭐ {language === 'sv' ? 'Du har 1 gratis analys kvar idag' : 'You have 1 free analysis left today'}
                     </p>
                   </div>
                 )}
                 {!isCheckingQuota && user && !isAdmin && hasUsedDailyAnalysis && (
                   <div className="px-6 py-4 rounded-lg bg-destructive/10 border border-destructive/20">
                     <p className="text-sm font-medium text-center text-destructive">
-                      {language === 'sv' 
-                        ? 'Du har använt dina 2 gratis analyser. Försök igen om 24 timmar.' 
+                      ❌ {language === 'sv' 
+                        ? 'Du har använt dina två gratis analyser. Försök igen om 24 timmar.' 
                         : "You've used your 2 free analyses. Try again in 24 hours."}
                     </p>
                   </div>
@@ -413,7 +456,13 @@ const Index = () => {
               <Button
                 size="lg"
                 onClick={handleAnalyze}
-                disabled={!canAnalyze || isAnalyzing || (hasUsedDailyAnalysis && !isAdmin) || !user || isCheckingQuota}
+                disabled={
+                  !canAnalyze || 
+                  isAnalyzing || 
+                  isCheckingQuota ||
+                  !user ||
+                  (hasUsedDailyAnalysis && !isAdmin)
+                }
                 className="gap-2 px-8 py-6 text-lg"
               >
                 {isAnalyzing ? (
